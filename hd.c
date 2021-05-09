@@ -5,6 +5,14 @@
 #include <string.h>
 
 #define FORMAT_HEX "%lX"
+#define flush_printf(fd, ...) \
+    do { \
+        (void)fprintf((fd), __VA_ARGS__); \
+        (void)fflush((fd)); \
+    } while (0)
+
+#define oprintf(...) flush_printf(stdout, __VA_ARGS__)
+#define eprintf(...) flush_printf(stderr, __VA_ARGS__)
 
 static void usage(void);
 static int convert(char *numberlike, size_t *out, const char **outfmt);
@@ -16,17 +24,16 @@ static void print_section(int number, const char *term);
 
 static void usage(void)
 {
-    fprintf(stdout,
+    eprintf(
 "HexaDecimal Usage:\n\n"
 "hd help\n"
 "hd [0x]NUMBER - Convert the number to its opposite, hex or dec\n"
-"hd ord CHARACTER - Print the ASCII code of CHARACTER\n"
+"hd ord CHARACTER - Print the ASCII code of the first CHARACTER\n"
 "hd chr NUMBER - Print the ASCII character of NUMBER\n"
 "hd [0x]NUMBER [add|sub|and|or|xor|mul|div] [0x]NUMBER - Perform basic operation, keeping the hex or dec fmt of the first NUMBER\n"
 "hd [0x]NUMBER [not] - Perform not operation, keeping the hex or dec fmt\n"
 "hd [ex]table - Print the ASCII table, optionally also print the extended set\n\n"
 );
-    fflush(stdout);
 }
 
 int main(int argc, char **argv)
@@ -70,44 +77,37 @@ int main(int argc, char **argv)
 
         rv = convert(argv[1], &number, &fmt);
         if (rv != 0) {
-            fprintf(stderr, "Cannot convert '%s' to a number\n", argv[1]);
-            fflush(stderr);
+            eprintf("Cannot convert '%s' to a number\n", argv[1]);
             return rv;
         }
 
-        fprintf(stdout, fmt, number);
-        fflush(stdout);
+        oprintf(fmt, number);
         return 0;
     }
 
     if (argc == 3) {
         if (strcmp(argv[1], "ord") == 0) {
-            fprintf(stdout, "%d\n", argv[2][0]);
-            fflush(stdout);
+            oprintf("%d\n", argv[2][0]);
         }
         else if (strcmp(argv[1], "chr") == 0) {
             if (sscanf(argv[2], "%zu", &number) != 1) {
-                fprintf(stderr, "'%s' cannot be converted to a number\n", argv[2]);
-                fflush(stderr);
+                eprintf("'%s' cannot be converted to a number\n", argv[2]);
                 return 1;
             }
 
             fmt = ascii_lookup((int)number);
             if (fmt[0] == 0) {
-                fprintf(stderr, "Cannot convert '%s' to a number\n", argv[2]);
-                fflush(stderr);
+                eprintf("Cannot convert '%s' to ASCII\n", argv[2]);
                 return 2;
             }
 
-            fprintf(stdout, "%s\n", fmt);
-            fflush(stdout);
+            oprintf("%s\n", fmt);
         }
         else if (strcmp(argv[2], "not") == 0) {
             goto OperationNot;
         }
         else {
-            fprintf(stderr, "Unknown option '%s'\n", argv[1]);
-            fflush(stderr);
+            eprintf("Unknown option '%s'\n", argv[1]);
             return 1;
         }
         return 0;
@@ -116,16 +116,14 @@ int main(int argc, char **argv)
     if (argc == 4) {
         rv = convert(argv[3], &number2, NULL);
         if (rv != 0) {
-            fprintf(stderr, "Cannot convert '%s' to a number\n", argv[3]);
-            fflush(stderr);
+            eprintf("Cannot convert '%s' to a number\n", argv[3]);
             return rv;
         }
 
     OperationNot:
         rv = convert(argv[1], &number, &fmt);
         if (rv != 0) {
-            fprintf(stderr, "Cannot convert '%s' to a number\n", argv[1]);
-            fflush(stderr);
+            eprintf("Cannot convert '%s' to a number\n", argv[1]);
             return rv;
         }
 
@@ -146,13 +144,11 @@ int main(int argc, char **argv)
         else if (strcmp("mul", argv[2]) == 0) number = number * number2;
         else if (strcmp("div", argv[2]) == 0) number = number / number2;
         else {
-            fprintf(stderr, "Unknown option '%s'\n", argv[2]);
-            fflush(stderr);
+            eprintf("Unknown option '%s'\n", argv[2]);
             return 1;
         }
 
-        fprintf(stdout, fmt, number);
-        fflush(stdout);
+        oprintf(fmt, number);
         return 0;
     }
 
