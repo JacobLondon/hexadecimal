@@ -4,10 +4,11 @@ FILES=\
 	hd.c
 CFLAGS=\
 	-Wall \
-	-Wextra
+	-Wextra \
+	-lm
 INSTALLDIR=/usr/bin
 
-.PHONY: clean install uninstall
+.PHONY: $(TARGET) all clean install uninstall
 
 all: $(TARGET)
 

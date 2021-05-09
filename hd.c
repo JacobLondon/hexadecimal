@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <math.h>
 
 #define FORMAT_HEX "%lX"
 #define flush_printf(fd, ...) \
@@ -26,12 +27,13 @@ static void usage(void)
 {
     eprintf(
 "HexaDecimal Usage:\n\n"
+"Note all operations are for unsigned integers\n\n"
 "hd help\n"
 "hd [0x]NUMBER - Convert the number to its opposite, hex or dec\n"
 "hd ord CHARACTER - Print the ASCII code of the first CHARACTER\n"
 "hd chr NUMBER - Print the ASCII character of NUMBER\n"
-"hd [0x]NUMBER [add|sub|and|or|xor|mul|div] [0x]NUMBER - Perform basic operation, keeping the hex or dec fmt of the first NUMBER\n"
-"hd [0x]NUMBER [not] - Perform not operation, keeping the hex or dec fmt\n"
+"hd [0x]NUMBER [add|sub|and|or|xor|mul|div|pow|shl|shr|[gn]t[e]|ne|eq|mod] [0x]NUMBER - Perform basic operation, keeping the hex or dec fmt of the first NUMBER\n"
+"hd [0x]NUMBER [inv|not] - Perform operation, keeping the hex or dec fmt\n"
 "hd [ex]table - Print the ASCII table, optionally also print the extended set\n\n"
 );
 }
@@ -103,8 +105,14 @@ int main(int argc, char **argv)
 
             oprintf("%s\n", fmt);
         }
-        else if (strcmp(argv[2], "not") == 0) {
-            goto OperationNot;
+        else if (
+            (strcmp(argv[2], "inv") == 0) ||
+            (strcmp(argv[2], "not") == 0) ||
+            (strcmp(argv[2], "pos") == 0) ||
+            (strcmp(argv[2], "neg") == 0)
+        )
+        {
+            goto OperationUnary;
         }
         else {
             eprintf("Unknown option '%s'\n", argv[1]);
@@ -120,7 +128,7 @@ int main(int argc, char **argv)
             return rv;
         }
 
-    OperationNot:
+    OperationUnary:
         rv = convert(argv[1], &number, &fmt);
         if (rv != 0) {
             eprintf("Cannot convert '%s' to a number\n", argv[1]);
@@ -140,9 +148,22 @@ int main(int argc, char **argv)
         else if (strcmp("and", argv[2]) == 0) number = number & number2;
         else if (strcmp("or",  argv[2]) == 0) number = number | number2;
         else if (strcmp("xor", argv[2]) == 0) number = number ^ number2;
-        else if (strcmp("not", argv[2]) == 0) number = ~number;
+        else if (strcmp("inv", argv[2]) == 0) number = ~number;
+        else if (strcmp("not", argv[2]) == 0) number = !number;
+        else if (strcmp("pos", argv[2]) == 0) number = +number;
+        else if (strcmp("neg", argv[2]) == 0) number = -number;
         else if (strcmp("mul", argv[2]) == 0) number = number * number2;
         else if (strcmp("div", argv[2]) == 0) number = number / number2;
+        else if (strcmp("pow", argv[2]) == 0) number = (size_t)pow(number, number2);
+        else if (strcmp("shl", argv[2]) == 0) number = number << number2;
+        else if (strcmp("shr", argv[2]) == 0) number = number >> number2;
+        else if (strcmp("gt",  argv[2]) == 0) number = number > number2;
+        else if (strcmp("lt",  argv[2]) == 0) number = number < number2;
+        else if (strcmp("gte", argv[2]) == 0) number = number >= number2;
+        else if (strcmp("lte", argv[2]) == 0) number = number <= number2;
+        else if (strcmp("ne",  argv[2]) == 0) number = number != number2;
+        else if (strcmp("eq",  argv[2]) == 0) number = number == number2;
+        else if (strcmp("mod", argv[2]) == 0) number = number % number2;
         else {
             eprintf("Unknown option '%s'\n", argv[2]);
             return 1;
