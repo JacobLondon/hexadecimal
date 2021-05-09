@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#define FORMAT_HEX "%lx"
+#define FORMAT_HEX "%lX"
 
 static void usage(void);
 static int convert(char *numberlike, size_t *out, const char **outfmt);
@@ -22,7 +22,8 @@ static void usage(void)
 "hd [0x]NUMBER - Convert the number to its opposite, hex or dec\n"
 "hd ord CHARACTER - Print the ASCII code of CHARACTER\n"
 "hd chr NUMBER - Print the ASCII character of NUMBER\n"
-"hd [0x]NUMBER [add|sub|and|or|xor] [0x]NUMBER - Perform basic operation, keeping the hex or dec fmt of the first NUMBER\n"
+"hd [0x]NUMBER [add|sub|and|or|xor|mul|div] [0x]NUMBER - Perform basic operation, keeping the hex or dec fmt of the first NUMBER\n"
+"hd [0x]NUMBER [not] - Perform not operation, keeping the hex or dec fmt\n"
 "hd [ex]table - Print the ASCII table, optionally also print the extended set\n\n"
 );
     fflush(stdout);
@@ -49,18 +50,18 @@ int main(int argc, char **argv)
         else if ((rv = (strcmp("extable", argv[1]) == 0)) || strcmp("table", argv[1]) == 0) {
             for (i = 0; i < 128 / 4; i++) {
                 print_section(i, "\t");
-                print_section(i + 32, "\t");
-                print_section(i + 64, "\t");
-                print_section(i + 96, "\n");
+                print_section(i + 128 / 4, "\t");
+                print_section(i + 128 / 2, "\t");
+                print_section(i + 128 * 3 / 4, "\n");
                 fflush(stdout);
             }
             // doing extended table
             if (rv) {
                 for (i = 128; i < 128 + 128 / 4; i++) {
                     print_section(i, "\t");
-                    print_section(i + 32, "\t");
-                    print_section(i + 64, "\t");
-                    print_section(i + 96, "\n");
+                    print_section(i + 128 / 4, "\t");
+                    print_section(i + 128 / 2, "\t");
+                    print_section(i + 128 * 3 / 4, "\n");
                     fflush(stdout);
                 }
             }
@@ -101,6 +102,9 @@ int main(int argc, char **argv)
             fprintf(stdout, "%s\n", fmt);
             fflush(stdout);
         }
+        else if (strcmp(argv[2], "not") == 0) {
+            goto OperationNot;
+        }
         else {
             fprintf(stderr, "Unknown option '%s'\n", argv[1]);
             fflush(stderr);
@@ -110,16 +114,17 @@ int main(int argc, char **argv)
     }
 
     if (argc == 4) {
-        rv = convert(argv[1], &number, &fmt);
+        rv = convert(argv[3], &number2, NULL);
         if (rv != 0) {
-            fprintf(stderr, "Cannot convert '%s' to a number\n", argv[1]);
+            fprintf(stderr, "Cannot convert '%s' to a number\n", argv[3]);
             fflush(stderr);
             return rv;
         }
 
-        rv = convert(argv[3], &number2, NULL);
+    OperationNot:
+        rv = convert(argv[1], &number, &fmt);
         if (rv != 0) {
-            fprintf(stderr, "Cannot convert '%s' to a number\n", argv[3]);
+            fprintf(stderr, "Cannot convert '%s' to a number\n", argv[1]);
             fflush(stderr);
             return rv;
         }
@@ -137,6 +142,9 @@ int main(int argc, char **argv)
         else if (strcmp("and", argv[2]) == 0) number = number & number2;
         else if (strcmp("or",  argv[2]) == 0) number = number | number2;
         else if (strcmp("xor", argv[2]) == 0) number = number ^ number2;
+        else if (strcmp("not", argv[2]) == 0) number = ~number;
+        else if (strcmp("mul", argv[2]) == 0) number = number * number2;
+        else if (strcmp("div", argv[2]) == 0) number = number / number2;
         else {
             fprintf(stderr, "Unknown option '%s'\n", argv[2]);
             fflush(stderr);
