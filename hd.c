@@ -22,19 +22,31 @@ static const char *gethexfmt(void);
 static const char *getdecfmt(void);
 static const char *ascii_lookup(int chr);
 static void print_section(int number, const char *term);
+static int chr_count(char *str, char chr);
+static void strreplace(char *str, char old, char new);
+
+static char hexformat[8] = "0x" FORMAT_HEX "\n";
+static char decformat[8] = "%zu\n";
 
 static void usage(void)
 {
     eprintf(
-"HexaDecimal Usage:\n\n"
+"HexaDecimal\n\n"
 "Note all operations are for unsigned integers\n\n"
 "hd help\n"
 "hd [0x]NUMBER - Convert the number to its opposite, hex or dec\n"
+"hd '[0x]NUMBER [0x]NUMBER [0x]NUMBER ...'\n"
 "hd ord CHARACTER - Print the ASCII code of the first CHARACTER\n"
-"hd chr NUMBER - Print the ASCII character of NUMBER\n"
-"hd [0x]NUMBER [add|sub|and|or|xor|mul|div|pow|shl|shr|[gn]t[e]|ne|eq|mod] [0x]NUMBER - Perform basic operation, keeping the hex or dec fmt of the first NUMBER\n"
-"hd [0x]NUMBER [inv|not] - Perform operation, keeping the hex or dec fmt\n"
-"hd [ex]table - Print the ASCII table, optionally also print the extended set\n\n"
+"hd chr NUMBER - Print the ASCII character NUMBER\n"
+"hd [0x]NUMBER BINOP [0x]NUMBER - Perform basic operation, keeping the fmt of the first NUMBER\n"
+"hd [0x]NUMBER UNOP - Perform operation, keeping the fmt\n"
+"hd [ex]table - Print the ASCII table, optionally also print the extended set\n"
+"\n"
+"NUMBER: [0-9]+\n"
+"CHARACTER: <ASCII>\n"
+"BINOP: [add|sub|and|or|xor|mul|div|pow|shl|shr|[gn]t[e]|ne|eq|mod]\n"
+"UNOP: [inv|not]\n"
+"\n"
 );
 }
 
@@ -45,6 +57,7 @@ int main(int argc, char **argv)
     const char *fmt;
     int rv;
     int i;
+    char *p;
 
     if (argc <= 1) {
         usage();
@@ -77,13 +90,25 @@ int main(int argc, char **argv)
             return 0;
         }
 
-        rv = convert(argv[1], &number, &fmt);
-        if (rv != 0) {
-            eprintf("Cannot convert '%s' to a number\n", argv[1]);
-            return rv;
-        }
+        i = chr_count(argv[1], ' ') + 1;
+        p = argv[1];
+        strreplace(hexformat, '\n', 0);
+        strreplace(decformat, '\n', 0);
+        for ( ; i > 0; i--) {
+            rv = convert(p, &number, &fmt);
+            if (rv != 0) {
+                eprintf("Cannot convert '%s' to a number\n", argv[1]);
+                return rv;
+            }
+            oprintf(fmt, number);
 
-        oprintf(fmt, number);
+            p = strchr(p, ' ');
+            if (p) {
+                p++;
+                oprintf(" ");
+            }
+        }
+        oprintf("\n");
         return 0;
     }
 
@@ -220,12 +245,12 @@ static int ishexfmt(char *fmt)
 
 static const char *gethexfmt(void)
 {
-    return "0x" FORMAT_HEX "\n";
+    return hexformat;
 }
 
 static const char *getdecfmt(void)
 {
-    return "%zu\n";
+    return decformat;
 }
 
 static const char *ascii_lookup(int chr)
@@ -286,4 +311,29 @@ static void print_section(int number, const char *term)
 {
     assert(term);
     fprintf(stdout, "%3d %2X %03o %5s%s", number, number, number, ascii_lookup(number), term);
+}
+
+static int chr_count(char *str, char chr)
+{
+    int count = 0;
+    assert(str);
+
+    while (*str) {
+        if (*str == chr) {
+            count++;
+        }
+        str++;
+    }
+    return count;
+}
+
+static void strreplace(char *str, char old, char new)
+{
+    assert(str);
+    while (*str) {
+        if (*str == old) {
+            *str = new;
+        }
+        str++;
+    }
 }
