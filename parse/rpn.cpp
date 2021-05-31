@@ -4,6 +4,7 @@
 #include <new>
 #include <vector>
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include "rpn.hpp"
@@ -65,26 +66,16 @@ struct Value {
     Value sub(Value& other) noexcept;
     Value div(Value& other) noexcept;
     Value mul(Value& other) noexcept;
+    Value mod(Value& other) noexcept;
 };
-
-// assume This and Other are the same type
-#define value_oneop(ThisP, Other, Op) \
-    do { \
-        switch (ThisP->type) { \
-        case TYPE_FLOAT: return Value(this->number.f Op other.number.f); \
-        case TYPE_INT:   return Value(this->number.i Op other.number.i); \
-        case TYPE_UINT:  return Value(this->number.u Op other.number.u); \
-        default: \
-            assert(0); \
-            break; \
-        } \
-    } while (0)
 
 struct Node {
     virtual void exec(std::stack<Value>& stack) noexcept = 0;
 };
 
-typedef void (* SymOp)(std::stack<Value>& stack);
+typedef Value (* SymOp)(void);
+typedef Value (* SymBinop)(Value& lhs, Value& rhs);
+typedef Value (*SymUnop)(Value& lhs);
 
 struct SymNode : public Node {
     SymOp op;
@@ -103,24 +94,26 @@ struct NumNode : public Node {
 static Node *node_new(char *value) noexcept;
 static void node_free(Node *self) noexcept;
 
-static void op_none(std::stack<Value>& stack) noexcept;
-static void op_add(std::stack<Value>& stack) noexcept;
-static void op_sub(std::stack<Value>& stack) noexcept;
-static void op_mul(std::stack<Value>& stack) noexcept;
-static void op_div(std::stack<Value>& stack) noexcept;
+static Value binop_none(Value& lhs, Value& rhs) noexcept;
+static Value binop_add(Value& lhs, Value& rhs) noexcept;
+static Value binop_sub(Value& lhs, Value& rhs) noexcept;
+static Value binop_mul(Value& lhs, Value& rhs) noexcept;
+static Value binop_div(Value& lhs, Value& rhs) noexcept;
+static Value binop_mod(Value& lhs, Value& rhs) noexcept;
 static bool op_isunary(SymOp op) noexcept;
 static bool op_isbinary(SymOp op) noexcept;
 
-static SymOp binopTable[] = {
-    op_none,
-    op_add,
-    op_sub,
-    op_mul,
-    op_div,
+static SymBinop binopTable[] = {
+    binop_none,
+    binop_add,
+    binop_sub,
+    binop_mul,
+    binop_div,
+    binop_mod,
     NULL,
 };
 
-static SymOp unopTable[] = {
+static SymUnop unopTable[] = {
     NULL,
 };
 
@@ -132,7 +125,7 @@ struct Rpn {
     Rpn() noexcept;
     ~Rpn() noexcept;
     void exec() noexcept;
-    void push(char *value);
+    void push(char *value) noexcept;
 };
 
 Rpn::Rpn() noexcept :
@@ -153,7 +146,7 @@ void Rpn::exec() noexcept {
     }
 }
 
-void Rpn::push(char *value) {
+void Rpn::push(char *value) noexcept {
     Node *n = node_new(value);
     assert(n);
     this->nodes.push_back(n);
@@ -211,12 +204,12 @@ static Node *node_new(char *value) noexcept {
     // one char ops
     else if (value[1] == 0) {
         switch (value[0]) {
-        case '+': return (Node *) new (std::nothrow) SymNode(op_add);
-        case '-': return (Node *) new (std::nothrow) SymNode(op_sub);
-        case '*': return (Node *) new (std::nothrow) SymNode(op_mul);
-        case '/': return (Node *) new (std::nothrow) SymNode(op_div);
+        case '+': return (Node *) new (std::nothrow) SymNode((SymOp)binop_add);
+        case '-': return (Node *) new (std::nothrow) SymNode((SymOp)binop_sub);
+        case '*': return (Node *) new (std::nothrow) SymNode((SymOp)binop_mul);
+        case '/': return (Node *) new (std::nothrow) SymNode((SymOp)binop_div);
+        case '%': return (Node *) new (std::nothrow) SymNode((SymOp)binop_mod);
         }
-        assert(0);
     }
 
     // two char ops
@@ -246,7 +239,7 @@ static Node *node_new(char *value) noexcept {
     }
 
     assert(0);
-    return (Node *) new (std::nothrow) SymNode(op_none);
+    return (Node *) new (std::nothrow) SymNode((SymOp)binop_none);
 }
 
 static void node_free(Node *self) noexcept {
@@ -263,15 +256,25 @@ void SymNode::exec(std::stack<Value>& stack) noexcept {
     assert(stack.size() >= 1);
 
     if (op_isunary(this->op)) {
-
+        size_t size = stack.size();
+        assert(size >= 1);
+        Value lhs = stack.top();
+        stack.pop();
+        SymUnop op = (SymUnop)this->op;
+        Value res = op(lhs);
+        stack.push(res);
     }
     else {
-        
+        size_t size = stack.size();
+        assert(size >= 2);
+        Value rhs = stack.top();
+        stack.pop();
+        Value lhs = stack.top();
+        stack.pop();
+        SymBinop op = (SymBinop)this->op;
+        Value res = op(lhs, rhs);
+        stack.push(res);
     }
-
-    this->op(stack);
-
-    binopTable[this->value](stack);
 }
 
 NumNode::NumNode(Value value) noexcept :
@@ -283,61 +286,38 @@ void NumNode::exec(std::stack<Value>& stack) noexcept {
     stack.push(this->value);
 }
 
-static void op_none(std::stack<Value>& stack) noexcept {
-    return;
+static Value binop_none(Value& lhs, Value& rhs) noexcept {
+    return Value();
 }
 
-static void op_add(std::stack<Value>& stack) noexcept {
-    size_t size = stack.size();
-    assert(size >= 2);
-
-    Value rhs = stack.top();
-    stack.pop();
-    Value lhs = stack.top();
-    stack.pop();
+static Value binop_add(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
-    stack.push(lhs.add(rhs));
+    return lhs.add(rhs);
 }
 
-static void op_sub(std::stack<Value>& stack) noexcept {
-    size_t size = stack.size();
-    assert(size >= 2);
-
-    Value rhs = stack.top();
-    stack.pop();
-    Value lhs = stack.top();
-    stack.pop();
+static Value binop_sub(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
-    stack.push(lhs.sub(rhs));
+    return lhs.sub(rhs);
 }
 
-static void op_mul(std::stack<Value>& stack) noexcept {
-    size_t size = stack.size();
-    assert(size >= 2);
-
-    Value rhs = stack.top();
-    stack.pop();
-    Value lhs = stack.top();
-    stack.pop();
+static Value binop_mul(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
-    stack.push(lhs.mul(rhs));
+    return lhs.mul(rhs);
 }
 
-static void op_div(std::stack<Value>& stack) noexcept {
-    size_t size = stack.size();
-    assert(size >= 2);
-
-    Value rhs = stack.top();
-    stack.pop();
-    Value lhs = stack.top();
-    stack.pop();
+static Value binop_div(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
-    stack.push(lhs.div(rhs));
+    return lhs.div(rhs);
+}
+
+static Value binop_mod(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    return lhs.mod(rhs);
 }
 
 static bool op_isunary(SymOp op) noexcept {
     for (size_t i = 0; unopTable[i] != NULL; i++) {
-        if (unopTable[i] == op) {
+        if (unopTable[i] == (SymUnop)op) {
             return true;
         }
     }
@@ -397,24 +377,36 @@ enum Type Value::coerce_chk(Value& other) noexcept {
 }
 
 void Value::coerce_exec(enum Type type) noexcept {
-    if (this->type >= type) {
+    if (this->type == type) {
         return;
     }
 
     switch (type) {
     case TYPE_FLOAT: switch (this->type) {
-        case TYPE_INT: this->number.f = (Float)this->number.i; break;
-        case TYPE_UINT: this->number.f = (Float)this->number.u; break;
+        case TYPE_INT: // up convert
+            this->number.f = (Float)this->number.i;
+            break;
+        case TYPE_UINT: // up convert
+            this->number.f = (Float)this->number.u;
+            break;
         }
         break;
     case TYPE_INT: switch (this->type) {
-        case TYPE_FLOAT: this->number.i = (Int)this->number.f; break;
-        case TYPE_UINT: this->number.i = (Int)this->number.u; break;
-        }
-        break;
+        case TYPE_FLOAT: // down convert
+            this->number.i = (Int)this->number.f;
+            break;
+        case TYPE_UINT: // down convert
+            this->number.i = (Int)this->number.u;
+            break;
+       }
+       break;
     case TYPE_UINT: switch (this->type) {
-        case TYPE_FLOAT: this->number.u = (Uint)this->number.f; break;
-        case TYPE_INT: this->number.u = (Uint)this->number.i; break;
+        case TYPE_FLOAT: // down convert
+            this->number.u = (Uint)this->number.f;
+            break;
+        case TYPE_INT: // up convert
+            this->number.u = (Uint)this->number.i;
+            break;
         }
         break;
     default:
@@ -431,28 +423,61 @@ void Value::coerce(Value& other) noexcept {
 
 Value Value::add(Value& other) noexcept {
     assert(this->type == other.type);
-    value_oneop(this, other, +);
+    switch (this->type) {
+    case TYPE_FLOAT: return Value(this->number.f + other.number.f);
+    case TYPE_INT:   return Value(this->number.i + other.number.i);
+    case TYPE_UINT:  return Value(this->number.u + other.number.u);
+    default: break;
+    }
     assert(0);
     return Value();
 }
 
 Value Value::sub(Value& other) noexcept {
     assert(this->type == other.type);
-    value_oneop(this, other, -);
+    switch (this->type) {
+    case TYPE_FLOAT: return Value(this->number.f - other.number.f);
+    case TYPE_INT:   return Value(this->number.i - other.number.i);
+    case TYPE_UINT:  return Value(this->number.u - other.number.u);
+    default: break;
+    }
     assert(0);
     return Value();
 }
 
 Value Value::mul(Value& other) noexcept {
     assert(this->type == other.type);
-    value_oneop(this, other, *);
+    switch (this->type) {
+    case TYPE_FLOAT: return Value(this->number.f * other.number.f);
+    case TYPE_INT:   return Value(this->number.i * other.number.i);
+    case TYPE_UINT:  return Value(this->number.u * other.number.u);
+    default: break;
+    }
     assert(0);
     return Value();
 }
 
 Value Value::div(Value& other) noexcept {
     assert(this->type == other.type);
-    value_oneop(this, other, /);
+    switch (this->type) {
+    case TYPE_FLOAT: return Value(this->number.f / other.number.f);
+    case TYPE_INT:   return Value(this->number.i / other.number.i);
+    case TYPE_UINT:  return Value(this->number.u / other.number.u);
+    default: break;
+    }
     assert(0);
     return Value();
 }
+
+Value Value::mod(Value& other) noexcept {
+    assert(this->type == other.type);
+    switch (this->type) {
+    case TYPE_FLOAT: return Value((Float)fmod(this->number.f, other.number.f));
+    case TYPE_INT:   return Value(this->number.i % other.number.i);
+    case TYPE_UINT:  return Value(this->number.u % other.number.u);
+    default: break;
+    }
+    assert(0);
+    return Value();
+}
+

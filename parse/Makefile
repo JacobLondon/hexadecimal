@@ -6,7 +6,8 @@ FILES=\
 CFLAGS=\
 	-Wall \
 	-Wextra \
-	-ggdb
+	-ggdb \
+	-lm
 
 FILES=*.cpp
 
