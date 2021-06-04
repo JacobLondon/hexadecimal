@@ -5,13 +5,9 @@ int main(int argc, char **argv)
 {
     Rpn *calc = rpn_new();
 
-    rpn_push(calc, (char *)"16");
-    rpn_push(calc, (char *)"200.1");
-    rpn_push(calc, (char *)"128.0");
-    rpn_push(calc, (char *)"64.0");
-    rpn_push(calc, (char *)"+");
-    rpn_push(calc, (char *)"-");
-    rpn_push(calc, (char *)"%");
+    for (int i = 1; i < argc; i++) {
+        rpn_push(calc, (char *)argv[i]);
+    }
 
     rpn_exec(calc);
     rpn_print(calc);

@@ -7,7 +7,9 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include "rpn.hpp"
+#include "math.hpp"
 
 #ifdef USE_32BITS
 typedef float Float;
@@ -16,6 +18,10 @@ typedef uint32_t Uint;
 #define FMT_FLOAT "%f"
 #define FMT_INT "%i"
 #define FMT_UINT "%u"
+#define FLOAT_MOD(...) fmodf(__VA_ARGS__)
+#define FLOAT_POW(...) powf(__VA_ARGS__)
+#define FLOAT_SQRT(...) fsqrtf(__VA_ARGS__)
+#define FLOAT_ZERO 0.0f
 #else
 typedef double Float;
 typedef int64_t Int;
@@ -23,29 +29,35 @@ typedef uint64_t Uint;
 #define FMT_FLOAT "%lf"
 #define FMT_INT "%zi"
 #define FMT_UINT "%zu"
+#define FLOAT_MOD(...) fmod(__VA_ARGS__)
+#define FLOAT_POW(...) pow(__VA_ARGS__)
+#define FLOAT_SQRT(...) sqrtf(__VA_ARGS__)
+#define FLOAT_ZERO 0.0
 #endif
-
-enum Symbol {
-    SYM_NONE,
-    SYM_ADD,
-    SYM_SUB,
-    SYM_MULT,
-    SYM_DIV,
-    SYM_COUNT
-};
+#define FMT_STRING "%s"
 
 // order of precedence, lowest to highest
 enum Type {
     TYPE_INT,
     TYPE_UINT,
     TYPE_FLOAT,
+    TYPE_STRING,
     TYPE_COUNT
+};
+
+static const char *typeTable[] = {
+    "Int",
+    "Uint",
+    "Float",
+    "String",
+    "",
 };
 
 union Number {
     Int i;
     Uint u;
     Float f;
+    const char *s;
 };
 
 struct Value {
@@ -56,17 +68,15 @@ struct Value {
     Value(Int number) noexcept;
     Value(Uint number) noexcept;
     Value(Float number) noexcept;
+    Value(const char *value) noexcept;
 
     void print() noexcept;
+    void println() noexcept;
     enum Type coerce_chk(Value& other) noexcept; // greatest precedence
     void coerce_exec(enum Type type) noexcept; // cast to the type
     void coerce(Value& other) noexcept;
-
-    Value add(Value& other) noexcept;
-    Value sub(Value& other) noexcept;
-    Value div(Value& other) noexcept;
-    Value mul(Value& other) noexcept;
-    Value mod(Value& other) noexcept;
+    void pun(enum Type type) noexcept; // pun to the type
+    Value unexpected_type(void) noexcept;
 };
 
 struct Node {
@@ -100,6 +110,27 @@ static Value binop_sub(Value& lhs, Value& rhs) noexcept;
 static Value binop_mul(Value& lhs, Value& rhs) noexcept;
 static Value binop_div(Value& lhs, Value& rhs) noexcept;
 static Value binop_mod(Value& lhs, Value& rhs) noexcept;
+static Value binop_pow(Value& lhs, Value& rhs) noexcept;
+static Value binop_xor(Value& lhs, Value& rhs) noexcept;
+static Value binop_bitand(Value& lhs, Value& rhs) noexcept;
+static Value binop_bitor(Value& lhs, Value& rhs) noexcept;
+static Value binop_and(Value& lhs, Value& rhs) noexcept;
+static Value binop_or(Value& lhs, Value& rhs) noexcept;
+static Value binop_shl(Value& lhs, Value& rhs) noexcept;
+static Value binop_shr(Value& lhs, Value& rhs) noexcept;
+static Value binop_equ(Value& lhs, Value& rhs) noexcept;
+static Value binop_neq(Value& lhs, Value& rhs) noexcept;
+static Value binop_gt(Value& lhs, Value& rhs) noexcept;
+static Value binop_gte(Value& lhs, Value& rhs) noexcept;
+static Value binop_lt(Value& lhs, Value& rhs) noexcept;
+static Value binop_lte(Value& lhs, Value& rhs) noexcept;
+static Value binop_cast(Value& lhs, Value& rhs) noexcept;
+static Value binop_pun(Value& lhs, Value& rhs) noexcept;
+
+static Value unop_not(Value& lhs) noexcept;
+static Value unop_inv(Value& lhs) noexcept;
+static Value unop_end(Value& lhs) noexcept;
+static Value unop_sep(Value& lhs) noexcept;
 static bool op_isunary(SymOp op) noexcept;
 static bool op_isbinary(SymOp op) noexcept;
 
@@ -110,13 +141,32 @@ static SymBinop binopTable[] = {
     binop_mul,
     binop_div,
     binop_mod,
+    binop_pow,
+    binop_xor,
+    binop_bitand,
+    binop_bitor,
+    binop_and,
+    binop_or,
+    binop_shl,
+    binop_shr,
+    binop_equ,
+    binop_neq,
+    binop_gt,
+    binop_gte,
+    binop_lt,
+    binop_lte,
+    binop_cast,
+    binop_pun,
     NULL,
 };
 
 static SymUnop unopTable[] = {
+    unop_not,
+    unop_inv,
+    unop_end,
+    unop_sep,
     NULL,
 };
-
 
 struct Rpn {
     std::stack<Value> stack;
@@ -173,18 +223,19 @@ void rpn_push(Rpn *self, char *value) noexcept {
 
 void rpn_print(Rpn *self) noexcept {
     assert(self);
-    assert(self->stack.size() >= 1);
+    if (self->stack.size() < 1) {
+        fprintf(stderr, "Stack empty\n");
+        exit(1);
+    }
 
     Value& value = self->stack.top();
-    value.print();
+    value.println();
 }
 
 void rpn_free(Rpn *self) noexcept {
     assert(self);
     delete self;
 }
-
-
 
 static Node *node_new(char *value) noexcept {
     assert(value);
@@ -196,25 +247,59 @@ static Node *node_new(char *value) noexcept {
         if (sscanf(value, FMT_FLOAT, &number) == 1) {
             return (Node *) new (std::nothrow) NumNode(Value(number));
         }
-        else {
-            assert(0);
-        }
     }
 
-    // one char ops
-    else if (value[1] == 0) {
-        switch (value[0]) {
-        case '+': return (Node *) new (std::nothrow) SymNode((SymOp)binop_add);
-        case '-': return (Node *) new (std::nothrow) SymNode((SymOp)binop_sub);
-        case '*': return (Node *) new (std::nothrow) SymNode((SymOp)binop_mul);
-        case '/': return (Node *) new (std::nothrow) SymNode((SymOp)binop_div);
-        case '%': return (Node *) new (std::nothrow) SymNode((SymOp)binop_mod);
-        }
-    }
+    #define XENTRY(Name, Op) {Name, (SymOp)Op}
+    static struct {
+        const char *name; SymOp op;
+    } lookup[] = {
+        XENTRY("+", binop_add),
+        XENTRY("-", binop_sub),
+        XENTRY("*", binop_mul),
+        XENTRY("/", binop_div),
+        XENTRY("%", binop_mod),
+        XENTRY("^", binop_xor),
+        XENTRY("&", binop_bitand),
+        XENTRY("|", binop_bitor),
+        XENTRY("!", unop_not),
+        XENTRY("~", unop_inv),
+        XENTRY("&&", binop_and),
+        XENTRY("||", binop_or),
+        XENTRY("**", binop_pow),
+        XENTRY("<<", binop_shl),
+        XENTRY(">>", binop_shr),
+        XENTRY("==", binop_equ),
+        XENTRY("!=", binop_neq),
+        XENTRY(">", binop_gt),
+        XENTRY(">=", binop_gte),
+        XENTRY("<", binop_lt),
+        XENTRY("<=", binop_lte),
+        XENTRY(";", unop_end), // these two ops actually put an unused value on the stack
+        XENTRY(",", unop_sep), // but this is fine
+        XENTRY("to", binop_cast),
+        XENTRY("as", binop_pun),
+        XENTRY("sqrt", NULL),
+        XENTRY("gcd", NULL),
+        XENTRY("lcm", NULL),
+        XENTRY("sin", NULL),
+        XENTRY("cos", NULL),
+        XENTRY("tan", NULL),
+        XENTRY("abs", NULL),
+        XENTRY("sgn", NULL),
+        XENTRY("floor", NULL),
+        XENTRY("round", NULL),
+        XENTRY(NULL, NULL),
+    };
+    #undef XENTRY
 
-    // two char ops
-    else if (value[2] == 0) {
-        // ...
+    for (size_t i = 0; lookup[i].name != NULL; i++) {
+        if (strcmp(lookup[i].name, value) == 0) {
+            if (lookup[i].op == NULL) {
+                fprintf(stderr, "Operation '%s' not implemented\n", lookup[i].name);
+                exit(1);
+            }
+            return (Node *) new (std::nothrow) SymNode(lookup[i].op);
+        }
     }
 
     // signed
@@ -223,9 +308,6 @@ static Node *node_new(char *value) noexcept {
         if (sscanf(value, FMT_INT, &number) == 1) {
             return (Node *) new (std::nothrow) NumNode(Value(number));
         }
-        else {
-            assert(0);
-        }
     }
     // unsigned
     else {
@@ -233,13 +315,10 @@ static Node *node_new(char *value) noexcept {
         if (sscanf(value, FMT_UINT, &number) == 1) {
             return (Node *) new (std::nothrow) NumNode(Value(number));
         }
-        else {
-            assert(0);
-        }
     }
 
-    assert(0);
-    return (Node *) new (std::nothrow) SymNode((SymOp)binop_none);
+    // must be a word operation
+    return (Node *) new (std::nothrow) NumNode(Value((const char *)value));
 }
 
 static void node_free(Node *self) noexcept {
@@ -253,7 +332,10 @@ SymNode::SymNode(SymOp op) noexcept :
 }
 
 void SymNode::exec(std::stack<Value>& stack) noexcept {
-    assert(stack.size() >= 1);
+    if (stack.size() < 1) {
+        fprintf(stderr, "Stack empty\n");
+        exit(1);
+    }
 
     if (op_isunary(this->op)) {
         size_t size = stack.size();
@@ -292,27 +374,340 @@ static Value binop_none(Value& lhs, Value& rhs) noexcept {
 
 static Value binop_add(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
-    return lhs.add(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value(lhs.number.f + rhs.number.f);
+    case TYPE_INT:   return Value(lhs.number.i + rhs.number.i);
+    case TYPE_UINT:  return Value(lhs.number.u + rhs.number.u);
+    default: break;
+    }
+    return lhs.unexpected_type();
 }
 
 static Value binop_sub(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
-    return lhs.sub(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value(lhs.number.f - rhs.number.f);
+    case TYPE_INT:   return Value(lhs.number.i - rhs.number.i);
+    case TYPE_UINT:  return Value(lhs.number.u - rhs.number.u);
+    default: break;
+    }
+    return lhs.unexpected_type();
 }
 
 static Value binop_mul(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
-    return lhs.mul(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value(lhs.number.f * rhs.number.f);
+    case TYPE_INT:   return Value(lhs.number.i * rhs.number.i);
+    case TYPE_UINT:  return Value(lhs.number.u * rhs.number.u);
+    default: break;
+    }
+    return lhs.unexpected_type();
 }
 
 static Value binop_div(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
-    return lhs.div(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value(lhs.number.f / rhs.number.f);
+    case TYPE_INT:   return Value(lhs.number.i / rhs.number.i);
+    case TYPE_UINT:  return Value(lhs.number.u / rhs.number.u);
+    default: break;
+    }
+    return lhs.unexpected_type();
 }
 
 static Value binop_mod(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
-    return lhs.mod(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_MOD(lhs.number.f, rhs.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i % rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u % rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_pow(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_POW(lhs.number.f, rhs.number.f));
+    case TYPE_INT:   return Value((Int)int_pow((unsigned long)lhs.number.i, (unsigned long)rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)int_pow((unsigned long)lhs.number.u, (unsigned long)rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_xor(Value& lhs, Value& rhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: {
+        Value tmp = Value((Uint)(lhs.number.u ^ rhs.number.u));
+        tmp.pun(TYPE_FLOAT);
+        return tmp;
+    }
+    case TYPE_INT:   return Value((Int)(lhs.number.i ^ rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u ^ rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_bitand(Value& lhs, Value& rhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: {
+        Value tmp = Value((Uint)(lhs.number.u & rhs.number.u));
+        tmp.pun(TYPE_FLOAT);
+        return tmp;
+    }
+    case TYPE_INT:   return Value((Int)(lhs.number.i & rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u & rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_bitor(Value& lhs, Value& rhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: {
+        Value tmp = Value((Uint)(lhs.number.u | rhs.number.u));
+        tmp.pun(TYPE_FLOAT);
+        return tmp;
+    }
+    case TYPE_INT:   return Value((Int)(lhs.number.i | rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u | rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_and(Value& lhs, Value& rhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)((lhs.number.f != FLOAT_ZERO) && (rhs.number.u != FLOAT_ZERO)));
+    case TYPE_INT:   return Value((Int)(lhs.number.i && rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u && rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_or(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)((lhs.number.f != FLOAT_ZERO) || (rhs.number.f != FLOAT_ZERO)));
+    case TYPE_INT:   return Value((Int)(lhs.number.i || rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u || rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_shl(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: {
+        Value tmp = Value((Uint)(lhs.number.u << (Uint)round(rhs.number.f)));
+        tmp.pun(TYPE_FLOAT);
+        return tmp;
+    }
+    case TYPE_INT:   return Value((Int)(lhs.number.i << rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u << rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_shr(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: {
+        Value tmp = Value((Uint)(lhs.number.u >> (Uint)round(rhs.number.f)));
+        tmp.pun(TYPE_FLOAT);
+        return tmp;
+    }
+    case TYPE_INT:   return Value((Int)(lhs.number.i >> rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u >> rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_equ(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)(lhs.number.f == rhs.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i == rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u == rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_neq(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)(lhs.number.f != rhs.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i != rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u != rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_gt(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)(lhs.number.f > rhs.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i > rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u > rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_gte(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)(lhs.number.f >= rhs.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i >= rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u >= rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_lt(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)(lhs.number.f < rhs.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i < rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u < rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_lte(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    assert(lhs.type == rhs.type);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)(lhs.number.f <= rhs.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i <= rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u <= rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_cast(Value& lhs, Value& rhs) noexcept {
+    if (rhs.type != TYPE_STRING) {
+        return rhs.unexpected_type();
+    }
+
+    for (size_t i = 0; i < TYPE_COUNT; i++) {
+        if (strcasecmp(rhs.number.s, typeTable[i]) == 0) {
+            switch (lhs.type) {
+            case TYPE_FLOAT: {
+                Value tmp = Value(lhs.number.f);
+                tmp.coerce_exec((Type)i);
+                return tmp;
+            }
+            case TYPE_INT: {
+                Value tmp = Value(lhs.number.i);
+                tmp.coerce_exec((Type)i);
+                return tmp;
+            }
+            case TYPE_UINT: {
+                Value tmp = Value(lhs.number.u);
+                tmp.coerce_exec((Type)i);
+                return tmp;
+            }
+            default:
+                return lhs.unexpected_type();
+            }
+        }
+    }
+
+    return rhs.unexpected_type();
+}
+
+static Value binop_pun(Value& lhs, Value& rhs) noexcept {
+    if (rhs.type != TYPE_STRING) {
+        return rhs.unexpected_type();
+    }
+
+    for (size_t i = 0; i < TYPE_COUNT; i++) {
+        if (strcasecmp(rhs.number.s, typeTable[i]) == 0) {
+            switch (lhs.type) {
+            case TYPE_FLOAT: {
+                Value tmp = Value(lhs.number.f);
+                tmp.pun((Type)i);
+                return tmp;
+            }
+            case TYPE_INT: {
+                Value tmp = Value(lhs.number.i);
+                tmp.pun((Type)i);
+                return tmp;
+            }
+            case TYPE_UINT: {
+                Value tmp = Value(lhs.number.u);
+                tmp.pun((Type)i);
+                return tmp;
+            }
+            default:
+                return lhs.unexpected_type();
+            }
+        }
+    }
+
+    return rhs.unexpected_type();
+}
+
+static Value unop_not(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)!lhs.number.u);
+    case TYPE_INT:   return Value((Int)!lhs.number.i);
+    case TYPE_UINT:  return Value((Uint)!lhs.number.u);
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_inv(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: {
+        Value tmp = Value((Uint)~lhs.number.u);
+        tmp.pun(TYPE_FLOAT);
+        return tmp;
+    }
+    case TYPE_INT:  return Value((Int)~lhs.number.i);
+    case TYPE_UINT: return Value((Uint)~lhs.number.u);
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_end(Value& lhs) noexcept {
+    lhs.println();
+    return Value();
+}
+
+static Value unop_sep(Value& lhs) noexcept {
+    lhs.print();
+    return Value();
 }
 
 static bool op_isunary(SymOp op) noexcept {
@@ -332,6 +727,13 @@ Value::Value() noexcept :
     number{0},
     type{TYPE_UINT}
 {
+}
+
+Value::Value(const char *value) noexcept :
+    number{0},
+    type{TYPE_STRING}
+{
+    number.s = value;
 }
 
 Value::Value(Float f) noexcept :
@@ -356,6 +758,21 @@ Value::Value(Uint u) noexcept :
 }
 
 void Value::print() noexcept {
+    switch (this->type) {
+    case TYPE_FLOAT:
+        std::cout << this->number.f << " ";
+        break;
+    case TYPE_INT:
+        std::cout << this->number.u << " ";
+        break;
+    case TYPE_UINT:
+        std::cout << this->number.i << " ";
+        break;
+    }
+    fflush(stdout);
+}
+
+void Value::println() noexcept {
     switch (this->type) {
     case TYPE_FLOAT:
         std::cout << this->number.f << std::endl;
@@ -410,8 +827,8 @@ void Value::coerce_exec(enum Type type) noexcept {
         }
         break;
     default:
-        assert(0);
-        break;
+        // not applicable
+        return;
     }
     this->type = type;
 }
@@ -421,63 +838,20 @@ void Value::coerce(Value& other) noexcept {
     other.coerce_exec(other.coerce_chk(*this));
 }
 
-Value Value::add(Value& other) noexcept {
-    assert(this->type == other.type);
-    switch (this->type) {
-    case TYPE_FLOAT: return Value(this->number.f + other.number.f);
-    case TYPE_INT:   return Value(this->number.i + other.number.i);
-    case TYPE_UINT:  return Value(this->number.u + other.number.u);
-    default: break;
-    }
-    assert(0);
-    return Value();
+void Value::pun(enum Type type) noexcept {
+    this->type = type;
 }
 
-Value Value::sub(Value& other) noexcept {
-    assert(this->type == other.type);
+Value Value::unexpected_type(void) noexcept {
+    const char *name = typeTable[this->type];
     switch (this->type) {
-    case TYPE_FLOAT: return Value(this->number.f - other.number.f);
-    case TYPE_INT:   return Value(this->number.i - other.number.i);
-    case TYPE_UINT:  return Value(this->number.u - other.number.u);
-    default: break;
+    case TYPE_FLOAT:  fprintf(stderr, "Unexpected %s: '" FMT_FLOAT "'\n", name, this->number.f); break;
+    case TYPE_INT:    fprintf(stderr, "Unexpected %s: '" FMT_INT "'\n", name, this->number.i); break;
+    case TYPE_UINT:   fprintf(stderr, "Unexpected %s: '" FMT_UINT "'\n", name, this->number.u); break;
+    case TYPE_STRING: fprintf(stderr, "Unexpected %s: '" FMT_STRING "'\n", name, this->number.s); break;
+    default:          fprintf(stderr, "Unexpected unknown error\n"); break;
     }
-    assert(0);
-    return Value();
-}
-
-Value Value::mul(Value& other) noexcept {
-    assert(this->type == other.type);
-    switch (this->type) {
-    case TYPE_FLOAT: return Value(this->number.f * other.number.f);
-    case TYPE_INT:   return Value(this->number.i * other.number.i);
-    case TYPE_UINT:  return Value(this->number.u * other.number.u);
-    default: break;
-    }
-    assert(0);
-    return Value();
-}
-
-Value Value::div(Value& other) noexcept {
-    assert(this->type == other.type);
-    switch (this->type) {
-    case TYPE_FLOAT: return Value(this->number.f / other.number.f);
-    case TYPE_INT:   return Value(this->number.i / other.number.i);
-    case TYPE_UINT:  return Value(this->number.u / other.number.u);
-    default: break;
-    }
-    assert(0);
-    return Value();
-}
-
-Value Value::mod(Value& other) noexcept {
-    assert(this->type == other.type);
-    switch (this->type) {
-    case TYPE_FLOAT: return Value((Float)fmod(this->number.f, other.number.f));
-    case TYPE_INT:   return Value(this->number.i % other.number.i);
-    case TYPE_UINT:  return Value(this->number.u % other.number.u);
-    default: break;
-    }
-    assert(0);
+    exit(1);
     return Value();
 }
 
