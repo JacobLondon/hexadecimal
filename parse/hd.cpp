@@ -70,13 +70,13 @@ int main(int argc, char **argv)
             }
 
             // didn't find it
-            fprintf(stderr, "Unknown option '%s'\n", argv[i]);
-            exit(1);
+            goto skip;
         next:
             ;
         }
         // done with arguments, we are at pivot
         else {
+        skip:
             pivot = i;
             break;
         }
