@@ -1,18 +1,8 @@
-#include <stack>
-#include <string>
-#include <iostream>
-#include <new>
-#include <vector>
-#include <assert.h>
-#include <ctype.h>
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include <strings.h> // strcasecmp
-#include "rpn.hpp"
-#include "math.hpp"
+#ifndef RPN_INCLUDE
+#include "rpn.hh"
+#endif
 
-#ifdef USE_32BITS
+#ifdef RPN_32BITS
 typedef float Float;
 typedef int32_t Int;
 typedef uint32_t Uint;
@@ -63,10 +53,10 @@ enum Type {
 };
 
 static const char *typeTable[] = {
-    "Int",
-    "Uint",
-    "Float",
-    "String",
+    "int",
+    "uint",
+    "float",
+    "string",
     "",
 };
 
@@ -81,10 +71,10 @@ enum Format {
 };
 
 static const char *formatTable[] = {
-    "Dec",
-    "Hex",
-    "Oct",
-    "Bin",
+    "dec",
+    "hex",
+    "oct",
+    "bin",
     //"Big", // endianness
     //"Little",
     "",
@@ -214,6 +204,75 @@ static SymUnop unopTable[] = {
     NULL,
 };
 
+#define XENTRY(Name, Op) {Name, (SymOp)Op}
+static struct {
+    const char *name; SymOp op;
+} opLookup[] = {
+    XENTRY("+", binop_add),
+    XENTRY("add", binop_add),
+    XENTRY("-", binop_sub),
+    XENTRY("sub", binop_sub),
+    XENTRY("*", binop_mul),
+    XENTRY("mul", binop_mul),
+    XENTRY("/", binop_div),
+    XENTRY("div", binop_div),
+    XENTRY("%", binop_mod),
+    XENTRY("mod", binop_mod),
+    XENTRY("^", binop_xor),
+    XENTRY("xor", binop_xor),
+    XENTRY("&", binop_bitand),
+    XENTRY("bitand", binop_bitand),
+    XENTRY("|", binop_bitor),
+    XENTRY("bitor", binop_bitor),
+    XENTRY("&~", NULL),//binop_bitandinv), // a & ~b
+    XENTRY("bitandinv", NULL),//binop_bitandinv), // a & ~b
+    XENTRY("!", unop_not),
+    XENTRY("not", unop_not),
+    XENTRY("~", unop_inv),
+    XENTRY("inv", unop_inv),
+    XENTRY("&&", binop_and),
+    XENTRY("and", binop_and),
+    XENTRY("||", binop_or),
+    XENTRY("or", binop_or),
+    XENTRY("**", binop_pow),
+    XENTRY("pow", binop_pow),
+    XENTRY("<<", binop_shl),
+    XENTRY("shl", binop_shl),
+    XENTRY(">>", binop_shr),
+    XENTRY("shr", binop_shr),
+    XENTRY("==", binop_equ),
+    XENTRY("eq", binop_equ),
+    XENTRY("!=", binop_neq),
+    XENTRY("neq", binop_neq),
+    XENTRY(">", binop_gt),
+    XENTRY("gt", binop_gt),
+    XENTRY(">=", binop_gte),
+    XENTRY("gte", binop_gte),
+    XENTRY("<", binop_lt),
+    XENTRY("lt", binop_lt),
+    XENTRY("<=", binop_lte),
+    XENTRY("lte", binop_lte),
+    XENTRY(";", unop_end), // these two ops actually put an unused value on the stack
+    XENTRY("end", unop_end),
+    XENTRY(",", unop_sep), // but this is fine
+    XENTRY("sep", unop_sep),
+    XENTRY("to", binop_cast),
+    XENTRY("as", binop_pun),
+    XENTRY("sqrt", NULL),
+    XENTRY("gcd", NULL),
+    XENTRY("lcm", NULL),
+    XENTRY("sin", NULL),
+    XENTRY("cos", NULL),
+    XENTRY("tan", NULL),
+    XENTRY("abs", NULL), // to +
+    XENTRY("neg", NULL), // to opposite
+    XENTRY("sgn", NULL),
+    XENTRY("floor", NULL),
+    XENTRY("round", NULL),
+    XENTRY(NULL, NULL),
+};
+#undef XENTRY
+
 struct Rpn {
     std::stack<Value> stack;
     std::vector<Node *> nodes;
@@ -251,7 +310,7 @@ void Rpn::push(char *value) noexcept {
     this->nodes.push_back(n);
 }
 
-Rpn *rpn_new() noexcept {
+Rpn *rpn_create() noexcept {
     Rpn *self = new (std::nothrow) Rpn{};
     if (!self) {
         EPRINT("Out of memory\n");
@@ -265,7 +324,7 @@ void rpn_exec(Rpn *self) noexcept {
     self->exec();
 }
 
-void rpn_push(Rpn *self, char *value) noexcept {
+void rpn_push(Rpn*self, char *value) noexcept {
     assert(self);
     assert(value);
     self->push(value);
@@ -282,13 +341,41 @@ void rpn_print(Rpn *self) noexcept {
     value.println();
 }
 
-void rpn_free(Rpn *self) noexcept {
+void rpn_destroy(Rpn *self) noexcept {
     assert(self);
     delete self;
 }
 
 void rpn_set_verbose(bool verbose) noexcept {
+    _verbose = verbose;
+}
 
+void rpn_help() noexcept {
+    EPRINT("Operations can be binary or unary, following C-style convention\n");
+    EPRINT("Special operations are 'end' or 'sep' which print a newline or space\n");
+    for (int i = 0; opLookup[i].name != NULL; i++) {
+        if (i % 14 == 0) {
+            EPRINT("\n\t");
+        }
+        EPRINT("%s ", opLookup[i].name);
+        fflush(stderr);
+    }
+    EPRINT("\n\n");
+
+    EPRINT("Types can be used as the rhs operand of 'as' or 'to' operations\n\n\t");
+    for (int i = 0; i < TYPE_COUNT; i++) {
+        EPRINT("%s ", typeTable[i]);
+        fflush(stderr);
+    }
+    EPRINT("\n\n");
+
+    EPRINT("Formats must be the rhs operand of 'as' operations\n\n\t");
+    for (int i = 0; i < FORMAT_COUNT; i++) {
+        EPRINT("%s ", formatTable[i]);
+        fflush(stderr);
+    }
+    EPRINT("\n");
+    fflush(stderr);
 }
 
 static Node *node_new(char *value) noexcept {
@@ -307,82 +394,13 @@ static Node *node_new(char *value) noexcept {
         }
     }
 
-    #define XENTRY(Name, Op) {Name, (SymOp)Op}
-    static struct {
-        const char *name; SymOp op;
-    } lookup[] = {
-        XENTRY("+", binop_add),
-        XENTRY("add", binop_add),
-        XENTRY("-", binop_sub),
-        XENTRY("sub", binop_sub),
-        XENTRY("*", binop_mul),
-        XENTRY("mul", binop_mul),
-        XENTRY("/", binop_div),
-        XENTRY("div", binop_div),
-        XENTRY("%", binop_mod),
-        XENTRY("mod", binop_mod),
-        XENTRY("^", binop_xor),
-        XENTRY("xor", binop_xor),
-        XENTRY("&", binop_bitand),
-        XENTRY("bitand", binop_bitand),
-        XENTRY("|", binop_bitor),
-        XENTRY("bitor", binop_bitor),
-        XENTRY("&~", NULL),//binop_bitandinv), // a & ~b
-        XENTRY("bitandinv", NULL),//binop_bitandinv), // a & ~b
-        XENTRY("!", unop_not),
-        XENTRY("not", unop_not),
-        XENTRY("~", unop_inv),
-        XENTRY("inv", unop_inv),
-        XENTRY("&&", binop_and),
-        XENTRY("and", binop_and),
-        XENTRY("||", binop_or),
-        XENTRY("or", binop_or),
-        XENTRY("**", binop_pow),
-        XENTRY("pow", binop_pow),
-        XENTRY("<<", binop_shl),
-        XENTRY("shl", binop_shl),
-        XENTRY(">>", binop_shr),
-        XENTRY("shr", binop_shr),
-        XENTRY("==", binop_equ),
-        XENTRY("eq", binop_equ),
-        XENTRY("!=", binop_neq),
-        XENTRY("neq", binop_neq),
-        XENTRY(">", binop_gt),
-        XENTRY("gt", binop_gt),
-        XENTRY(">=", binop_gte),
-        XENTRY("gte", binop_gte),
-        XENTRY("<", binop_lt),
-        XENTRY("lt", binop_lt),
-        XENTRY("<=", binop_lte),
-        XENTRY("lte", binop_lte),
-        XENTRY(";", unop_end), // these two ops actually put an unused value on the stack
-        XENTRY("end", unop_end),
-        XENTRY(",", unop_sep), // but this is fine
-        XENTRY("sep", unop_sep),
-        XENTRY("to", binop_cast),
-        XENTRY("as", binop_pun),
-        XENTRY("sqrt", NULL),
-        XENTRY("gcd", NULL),
-        XENTRY("lcm", NULL),
-        XENTRY("sin", NULL),
-        XENTRY("cos", NULL),
-        XENTRY("tan", NULL),
-        XENTRY("abs", NULL), // to +
-        XENTRY("neg", NULL), // to opposite
-        XENTRY("sgn", NULL),
-        XENTRY("floor", NULL),
-        XENTRY("round", NULL),
-        XENTRY(NULL, NULL),
-    };
-    #undef XENTRY
-
-    for (size_t i = 0; lookup[i].name != NULL; i++) {
-        if (strcmp(lookup[i].name, value) == 0) {
-            if (lookup[i].op == NULL) {
-                EPRINT("operation: '%s' not implemented\n", lookup[i].name);
+    for (size_t i = 0; opLookup[i].name != NULL; i++) {
+        if (strcmp(opLookup[i].name, value) == 0) {
+            if (opLookup[i].op == NULL) {
+                EPRINT("operation: '%s' not implemented\n", opLookup[i].name);
                 exit(1);
             }
-            return (Node *) new (std::nothrow) SymNode(lookup[i].op);
+            return (Node *) new (std::nothrow) SymNode(opLookup[i].op);
         }
     }
 
