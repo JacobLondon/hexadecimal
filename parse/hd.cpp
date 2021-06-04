@@ -3,6 +3,7 @@
 
 int main(int argc, char **argv)
 {
+    rpn_set_verbose(true);
     Rpn *calc = rpn_new();
 
     for (int i = 1; i < argc; i++) {

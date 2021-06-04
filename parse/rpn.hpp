@@ -9,4 +9,6 @@ void rpn_push(Rpn *self, char *value) noexcept;
 void rpn_print(Rpn *self) noexcept;
 void rpn_free(Rpn *self) noexcept;
 
+void rpn_set_verbose(bool verbose) noexcept;
+
 #endif // HD_RPN_H
