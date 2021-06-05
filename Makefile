@@ -1,26 +1,30 @@
 TARGET=hd
-CC=gcc
-FILES=\
-	hd.c
+CC=g++
 CFLAGS=\
 	-Wall \
 	-Wextra \
+	-ggdb \
 	-lm
-INSTALLDIR=/usr/bin
 
-.PHONY: $(TARGET) all clean install uninstall
+ifdef PREFIX
+MYPREFIX=$(PREFIX)
+else
+MYPREFIX=/usr/local
+endif
+FILES=*.cpp
+
+.PHONY: all $(TARGET) clean install uninstall
 
 all: $(TARGET)
 
 $(TARGET):
-	$(CC) -o $@ $(FILES) $(CFLAGS)
+	$(CC) -o $@ $(FILES)
 
 clean:
 	rm -f $(TARGET)
 
 install: $(TARGET)
-	cp -f $(TARGET) $(INSTALLDIR)
+	cp -f $(TARGET) $(MYPREFIX)/bin/
 
 uninstall:
-	rm -f $(INSTALLDIR)/$(TARGET)
-
+	rm -f $(MYPREFIX)/bin/$(TARGET)

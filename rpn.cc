@@ -114,7 +114,7 @@ struct Node {
 
 typedef Value (* SymOp)(void);
 typedef Value (* SymBinop)(Value& lhs, Value& rhs);
-typedef Value (*SymUnop)(Value& lhs);
+typedef Value (* SymUnop)(Value& lhs);
 
 struct SymNode : public Node {
     SymOp op;
@@ -254,7 +254,7 @@ static struct {
     XENTRY("end", unop_end),
     XENTRY(",", unop_sep), // but this is fine
     XENTRY("sep", unop_sep),
-    XENTRY("to", binop_cast),
+    XENTRY("cast", binop_cast),
     XENTRY("as", binop_pun),
     XENTRY("sqrt", NULL),
     XENTRY("gcd", NULL),
@@ -351,6 +351,7 @@ void rpn_set_verbose(bool verbose) noexcept {
 void rpn_help() noexcept {
     EPRINT("Operations can be binary or unary, following C-style convention\n");
     EPRINT("Special operations are 'end' or 'sep' which print a newline or space\n");
+    EPRINT("Format is space-seperated RPN (Reverse Polish Notation)\n");
     for (int i = 0; opLookup[i].name != NULL; i++) {
         if (i % 14 == 0) {
             EPRINT("\n\t");
