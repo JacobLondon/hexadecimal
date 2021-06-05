@@ -25,8 +25,8 @@ static struct {
 } argTable[] = {
     XENTRY("-h", func_help),
     XENTRY("--help", func_help),
-    XENTRY("-32", func_32),
-    XENTRY("-64", func_64),
+    XENTRY("--32", func_32),
+    XENTRY("--64", func_64),
     XENTRY("-o", func_ord),
     XENTRY("--ord", func_ord),
     XENTRY("-c", func_chr),
