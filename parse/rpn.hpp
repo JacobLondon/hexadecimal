@@ -1,6 +1,16 @@
 #ifndef HD_RPN_H
 #define HD_RPN_H
 
+#define REG_BIN R"(0[bB][01]+)"
+#define REG_OCT R"(0[oO][01234567]+)"
+#define REG_HEX R"(0[xX][0123456789aAbBcCdDeEfF]+)"
+#define REG_DEC R"([+-]?[123456789][1234567890]*(\.[0123456789]+)?)"
+#define REG_NUM "^" REG_BIN "|" REG_OCT "|" REG_HEX "|" REG_DEC "$"
+
+#define REG_UNSIGNED R"([123456789][0123456789]*)"
+#define REG_SIGNED R"([+-][123456789][0123456789]*)"
+#define REG_FLOAT R"([+-]?[123456789][1234567890]*\.[0123456789]*)"
+
 struct RpnVtable {
     void *(* create)() noexcept;
     void (* exec)(void *self) noexcept;

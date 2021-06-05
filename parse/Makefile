@@ -1,8 +1,5 @@
 TARGET=hd
 CC=g++
-FILES=\
-	hd.cpp\
-	rpn.cpp
 CFLAGS=\
 	-Wall \
 	-Wextra \

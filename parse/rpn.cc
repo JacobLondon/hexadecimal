@@ -130,8 +130,6 @@ struct NumNode : public Node {
     void exec(std::stack<Value>& stack) noexcept override;
 };
 
-static bool is_signed(const char *value) noexcept;
-static bool is_unsigned(const char *value) noexcept;
 static bool conve_binary(const char *value, Uint *out) noexcept;
 static void print_binary(Uint value) noexcept;
 
@@ -381,16 +379,84 @@ void rpn_help() noexcept {
 static Node *node_new(char *value) noexcept {
     assert(value);
 
+    // this isn't a memory leak, it will be collected
+    static std::regex *uReg = NULL;
+    static std::regex *iReg = NULL;
+    static std::regex *fReg = NULL;
+    static std::regex *bReg = NULL;
+    static std::regex *oReg = NULL;
+    static std::regex *hReg = NULL;
+
+    #define REG_INIT(RegP, Regexp) do { \
+        if (!RegP) { \
+            RegP = new std::regex(Regexp); \
+            if (!RegP) { \
+                EPRINT("Out of memory\n"); \
+                exit(ENOMEM); \
+            } \
+        } \
+    } while (0)
+
+    REG_INIT(uReg, REG_UNSIGNED);
+    REG_INIT(iReg, REG_SIGNED);
+    REG_INIT(fReg, REG_FLOAT);
+    REG_INIT(bReg, REG_BIN);
+    REG_INIT(oReg, REG_OCT);
+    REG_INIT(hReg, REG_HEX);
+
     if (value[0] == 0) {
         EPRINT("operation: <empty> does not exist\n");
         exit(1);
     }
 
     // floating point
-    if (strchr(value, '.')) {
+    if (std::regex_match(value, *fReg)) {
         Float number;
         if (sscanf(value, FMT_FLOAT, &number) == 1) {
             return (Node *) new (std::nothrow) NumNode(Value(number));
+        }
+    }
+
+    // signed
+    else if (std::regex_match(value, *iReg)) {
+        Int number;
+        if (sscanf(value, FMT_INT, &number) == 1) {
+            Value tmp = Value(number);
+            tmp.format(FORMAT_HEX);
+            return (Node *) new (std::nothrow) NumNode(tmp);
+        }
+    }
+    // unsigned
+    else if (std::regex_match(value, *uReg)) {
+        Uint number;
+        if (sscanf(value, FMT_UINT, &number) == 1) {
+            Value tmp = Value(number);
+            tmp.format(FORMAT_HEX);
+            return (Node *) new (std::nothrow) NumNode(tmp);
+        }
+    }
+    // hexadecimal
+    else if (std::regex_match(value, *hReg)) {
+        Uint number;
+        if (sscanf(&value[2], FMT_HEX, &number) == 1) {
+            Value tmp = Value(number);
+            return (Node *) new (std::nothrow) NumNode(tmp);
+        }
+    }
+    // octal
+    else if (std::regex_match(value, *oReg)) {
+        Uint number;
+        if (sscanf(&value[2], FMT_OCT, &number) == 1) {
+            Value tmp = Value(number);
+            return (Node *) new (std::nothrow) NumNode(tmp);
+        }
+    }
+    // binary
+    else if (std::regex_match(value, *bReg)) {
+        Uint number;
+        if (conve_binary(&value[2], &number)) {
+            Value tmp = Value(number);
+            return (Node *) new (std::nothrow) NumNode(tmp);
         }
     }
 
@@ -401,59 +467,6 @@ static Node *node_new(char *value) noexcept {
                 exit(1);
             }
             return (Node *) new (std::nothrow) SymNode(opLookup[i].op);
-        }
-    }
-
-    // signed
-    if (is_signed((const char *)value)) {
-        Int number;
-        if (sscanf(value, FMT_INT, &number) == 1) {
-            Value tmp = Value(number);
-            tmp.format(FORMAT_HEX);
-            return (Node *) new (std::nothrow) NumNode(tmp);
-        }
-    }
-    // unsigned
-    else if (is_unsigned((const char *)value)) {
-        Uint number;
-        if (sscanf(value, FMT_UINT, &number) == 1) {
-            Value tmp = Value(number);
-            tmp.format(FORMAT_HEX);
-            return (Node *) new (std::nothrow) NumNode(tmp);
-        }
-    }
-
-    if (value[1] != 0 && value[0] == '0') {
-        switch (value[1]) {
-        case 'x': // fallthrough
-        case 'X': {
-            Uint number;
-            if (sscanf(&value[2], FMT_HEX, &number) == 1) {
-                Value tmp = Value(number);
-                return (Node *) new (std::nothrow) NumNode(tmp);
-            }
-            break;
-        }
-        case 'O': // fallthrough
-        case 'o': {
-            Uint number;
-            if (sscanf(&value[2], FMT_OCT, &number) == 1) {
-                Value tmp = Value(number);
-                return (Node *) new (std::nothrow) NumNode(tmp);
-            }
-            break;
-        }
-        case 'b': // fallthrough
-        case 'B': {
-            Uint number;
-            if (conve_binary(&value[2], &number)) {
-                Value tmp = Value(number);
-                return (Node *) new (std::nothrow) NumNode(tmp);
-            }
-            break;
-        }
-        default:
-            break;
         }
     }
 
@@ -992,24 +1005,6 @@ void Value::println() noexcept {
         std::cout << this->number.i << std::endl;
         break;
     }
-}
-
-static bool is_signed(const char *value) noexcept {
-    assert(value);
-    if (value[0] != 0 && (value[0] == '+' || value[0] == '-')) {
-        return is_unsigned(&value[1]);
-    }
-    return false;
-}
-
-static bool is_unsigned(const char *value) noexcept {
-    assert(value);
-    for (size_t i = 0; value[i] != 0; i++) {
-        if (!isdigit(value[i])) {
-            return false;
-        }
-    }
-    return true;
 }
 
 static void print_binary(Uint value) noexcept {

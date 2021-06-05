@@ -3,6 +3,7 @@
 #include <iostream>
 #include <new>
 #include <vector>
+#include <regex>
 #include <assert.h>
 #include <ctype.h>
 #include <math.h>

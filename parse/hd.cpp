@@ -1,3 +1,4 @@
+#include <regex>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,73 +18,59 @@ static void func_chr(int argc, char **argv) noexcept;
 static void func_verbose(int argc, char **argv) noexcept;
 static void func_table(int argc, char **argv) noexcept;
 static void func_extable(int argc, char **argv) noexcept;
+static int arg_check(int argc, char **argv, const char *da, const char *ddarg) noexcept;
+static char *arg_get(int argc, char **argv, const char *da, const char *ddarg) noexcept;
 
 // _MUST_ be in pairs...
-#define XENTRY(Name, ProgFunc) {(const char *)Name, (prog_func)ProgFunc}
+#define XENTRY(Da, Ddarg, ProgFunc, Whatdo) { \
+    (const char *)Da, \
+    (const char *)Ddarg, \
+    (prog_func)ProgFunc, \
+    (const char *)Whatdo\
+}
 static struct {
-    const char *name; prog_func program;
+    const char *da;
+    const char *ddarg;
+    prog_func program;
+    const char *whatdo;
 } argTable[] = {
-    XENTRY("-h", func_help),
-    XENTRY("--help", func_help),
-    XENTRY("--32", func_32),
-    XENTRY("--64", func_64),
-    XENTRY("-o", func_ord),
-    XENTRY("--ord", func_ord),
-    XENTRY("-c", func_chr),
-    XENTRY("--chr", func_chr),
-    XENTRY("-v", func_verbose),
-    XENTRY("--verbose", func_verbose),
-    XENTRY("-t", func_table),
-    XENTRY("--table", func_table),
-    XENTRY("-e", func_extable),
-    XENTRY("--extable", func_extable),
-    XENTRY(NULL, NULL)
+    XENTRY("-h", "--help", func_help, "View this help and exit"),
+    XENTRY(NULL, "--32", func_32, "Set the operation word size to 32 bits"),
+    XENTRY(NULL, "--64", func_64, "Set the operation word size to 64 bits (default)"),
+    XENTRY(NULL, "--ord", func_ord, "Get the code of the first character and exit"),
+    XENTRY(NULL, "--chr", func_chr, "Get the character of the first number and exit"),
+    XENTRY("-v", "--verbose", func_verbose, "Display errors"),
+    XENTRY(NULL, "--table", func_table, "Get the ASCII table and exit"),
+    XENTRY(NULL, "--extable", func_extable, "Get the ASCII table and its extended set and exit"),
+    XENTRY(NULL, NULL, NULL, NULL)
 };
 #undef XENTRY
 
-const char *helpTable[] = {
-    "View this help and exit",
-    "Set the operation word size",
-    "Get the code of the first character and exit",
-    "Get the character of the first number and exit",
-    "Verbose errors",
-    "Get the ASCII table and exit",
-    "Get the ASCII table and its extended set and exit",
-    NULL,
-};
-
 int main(int argc, char **argv)
 {
-    int pivot = 1;
+    int pivot;
 
     if (argc <= 1) {
         func_help(1, NULL);
     }
 
-    for (int i = pivot; i < argc; i++) {
-        if (argv[i][0] == '-') {
-            for (int j = 0; argTable[j].name; j++) {
-                if (strcmp(argv[i], argTable[j].name) == 0) {
-                    argTable[j].program(argc - i, &argv[i]);
-                    goto next;
-                }
-            }
-
-            // didn't find it
-            goto skip;
-        next:
-            ;
+    for (int i = 0; argTable[i].program != NULL; i++) {
+        int ndx = arg_check(argc, argv, argTable[i].da, argTable[i].ddarg);
+        if (ndx) {
+            argTable[i].program(argc - i, &argv[ndx]);
         }
-        // done with arguments, we are at pivot
-        else {
-        skip:
+    }
+
+    // find pivot...
+    auto re = std::regex(REG_NUM);
+    for (int i = 0; i < argc; i++) {
+        if (std::regex_match(argv[i], re)) {
             pivot = i;
             break;
         }
     }
 
     void *calc = rpn->create();
-
     for (int i = pivot; i < argc; i++) {
         rpn->push(calc, (char *)argv[i]);
     }
@@ -96,17 +83,21 @@ int main(int argc, char **argv)
 }
 
 static void func_help(int argc, char **argv) noexcept {
+    char buf[256];
+    int n;
+
     fprintf(stderr,
         "Hexadecimal -- representation utility\n\n"
         "\thd [OPTIONS] [PROGRAM]\n\n"
         "OPTIONS\n"
     );
 
-    for (int i = 0; argTable[i].name != NULL; i += 2) {
-        fprintf(stderr, "\t%s, %s; %s\n",
-            argTable[i].name,
-            argTable[i + 1].name,
-            helpTable[i / 2]);
+    for (int i = 0; argTable[i].program != NULL; i += 1) {
+        n = 0;
+        n += snprintf(&buf[n], sizeof(buf) - n, "\t%s", argTable[i].da ? argTable[i].da : "");
+        n += snprintf(&buf[n], sizeof(buf) - n, "%s%s", argTable[i].da ? ", " : "", argTable[i].ddarg);
+        n += snprintf(&buf[n], sizeof(buf) - n, "; %s", argTable[i].whatdo);
+        fprintf(stderr, "%s\n", buf);
     }
 
     fprintf(stderr, "\nPROGRAM\n\n");
@@ -151,4 +142,24 @@ static void func_table(int argc, char **argv) noexcept {
 static void func_extable(int argc, char **argv) noexcept {
     fprintf(stderr, "extable: Not implemented\n");
     exit(1);
+}
+
+static int arg_check(int argc, char **argv, const char *da, const char *ddarg) noexcept {
+    int i;
+    for (i = 0; i < argc; i++) {
+        if ((da && strcmp(argv[i], da) == 0) || (ddarg && strcmp(argv[i], ddarg) == 0)) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+static char *arg_get(int argc, char **argv, const char *da, const char *ddarg) noexcept {
+    int i;
+    for (i = 0; i < argc; i++) {
+        if (((da && strcmp(argv[i], da) == 0) || (ddarg && strcmp(argv[i], ddarg) == 0)) && (i + 1 < argc)) {
+            return argv[i + 1];
+        }
+    }
+    return NULL;
 }
