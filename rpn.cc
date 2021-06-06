@@ -14,6 +14,11 @@ typedef uint32_t Uint;
 #define FLOAT_MOD(...) fmodf(__VA_ARGS__)
 #define FLOAT_POW(...) powf(__VA_ARGS__)
 #define FLOAT_SQRT(...) fsqrtf(__VA_ARGS__)
+#define FLOAT_SIN(...) sinf(__VA_ARGS__)
+#define FLOAT_COS(...) cosf(__VA_ARGS__)
+#define FLOAT_TAN(...) tanf(__VA_ARGS__)
+#define FLOAT_FLOOR(...) floorf(__VA_ARGS__)
+#define FLOAT_ROUND(...) roundf(__VA_ARGS__)
 #define FLOAT_ZERO 0.0f
 #else
 typedef double Float;
@@ -27,6 +32,11 @@ typedef uint64_t Uint;
 #define FLOAT_MOD(...) fmod(__VA_ARGS__)
 #define FLOAT_POW(...) pow(__VA_ARGS__)
 #define FLOAT_SQRT(...) sqrtf(__VA_ARGS__)
+#define FLOAT_SIN(...) sin(__VA_ARGS__)
+#define FLOAT_COS(...) cos(__VA_ARGS__)
+#define FLOAT_TAN(...) tan(__VA_ARGS__)
+#define FLOAT_FLOOR(...) floor(__VA_ARGS__)
+#define FLOAT_ROUND(...) round(__VA_ARGS__)
 #define FLOAT_ZERO 0.0
 #endif
 #define FMT_STRING "%s"
@@ -146,6 +156,7 @@ static Value binop_pow(Value& lhs, Value& rhs) noexcept;
 static Value binop_xor(Value& lhs, Value& rhs) noexcept;
 static Value binop_bitand(Value& lhs, Value& rhs) noexcept;
 static Value binop_bitor(Value& lhs, Value& rhs) noexcept;
+static Value binop_bitandinv(Value& lhs, Value& rhs) noexcept;
 static Value binop_and(Value& lhs, Value& rhs) noexcept;
 static Value binop_or(Value& lhs, Value& rhs) noexcept;
 static Value binop_shl(Value& lhs, Value& rhs) noexcept;
@@ -158,11 +169,21 @@ static Value binop_lt(Value& lhs, Value& rhs) noexcept;
 static Value binop_lte(Value& lhs, Value& rhs) noexcept;
 static Value binop_cast(Value& lhs, Value& rhs) noexcept;
 static Value binop_pun(Value& lhs, Value& rhs) noexcept;
+static Value binop_sqrt(Value& lhs, Value& rhs) noexcept;
+static Value binop_gcd(Value& lhs, Value& rhs) noexcept;
+static Value binop_lcm(Value& lhs, Value& rhs) noexcept;
 
 static Value unop_not(Value& lhs) noexcept;
 static Value unop_inv(Value& lhs) noexcept;
 static Value unop_end(Value& lhs) noexcept;
 static Value unop_sep(Value& lhs) noexcept;
+static Value unop_sin(Value& lhs) noexcept;
+static Value unop_cos(Value& lhs) noexcept;
+static Value unop_tan(Value& lhs) noexcept;
+static Value unop_abs(Value& lhs) noexcept;
+static Value unop_sgn(Value& lhs) noexcept;
+static Value unop_floor(Value& lhs) noexcept;
+static Value unop_round(Value& lhs) noexcept;
 static bool op_isunary(SymOp op) noexcept;
 static bool op_isbinary(SymOp op) noexcept;
 
@@ -179,6 +200,7 @@ static SymBinop binopTable[] = {
     binop_xor,
     binop_bitand,
     binop_bitor,
+    binop_bitandinv,
     binop_and,
     binop_or,
     binop_shl,
@@ -191,6 +213,9 @@ static SymBinop binopTable[] = {
     binop_lte,
     binop_cast,
     binop_pun,
+    binop_sqrt,
+    binop_gcd,
+    binop_lcm,
     NULL,
 };
 
@@ -199,6 +224,13 @@ static SymUnop unopTable[] = {
     unop_inv,
     unop_end,
     unop_sep,
+    unop_sin,
+    unop_cos,
+    unop_tan,
+    unop_abs,
+    unop_sgn,
+    unop_floor,
+    unop_round,
     NULL,
 };
 
@@ -222,8 +254,8 @@ static struct {
     XENTRY("bitand", binop_bitand),
     XENTRY("|", binop_bitor),
     XENTRY("bitor", binop_bitor),
-    XENTRY("&~", NULL),//binop_bitandinv), // a & ~b
-    XENTRY("bitandinv", NULL),//binop_bitandinv), // a & ~b
+    XENTRY("&~", binop_bitandinv), // a & ~b
+    XENTRY("bitandinv", binop_bitandinv),
     XENTRY("!", unop_not),
     XENTRY("not", unop_not),
     XENTRY("~", unop_inv),
@@ -250,23 +282,22 @@ static struct {
     XENTRY("lt", binop_lt),
     XENTRY("<=", binop_lte),
     XENTRY("lte", binop_lte),
-    XENTRY(";", unop_end), // these two ops actually put an unused value on the stack
+    XENTRY(";", unop_end),
     XENTRY("end", unop_end),
-    XENTRY(",", unop_sep), // but this is fine
+    XENTRY(",", unop_sep),
     XENTRY("sep", unop_sep),
     XENTRY("cast", binop_cast),
     XENTRY("as", binop_pun),
-    XENTRY("sqrt", NULL),
-    XENTRY("gcd", NULL),
-    XENTRY("lcm", NULL),
-    XENTRY("sin", NULL),
-    XENTRY("cos", NULL),
-    XENTRY("tan", NULL),
-    XENTRY("abs", NULL), // to +
-    XENTRY("neg", NULL), // to opposite
-    XENTRY("sgn", NULL),
-    XENTRY("floor", NULL),
-    XENTRY("round", NULL),
+    XENTRY("sqrt", binop_sqrt),
+    XENTRY("gcd", binop_gcd),
+    XENTRY("lcm", binop_lcm),
+    XENTRY("sin", unop_sin),
+    XENTRY("cos", unop_cos),
+    XENTRY("tan", unop_tan),
+    XENTRY("abs", unop_abs), // to +
+    XENTRY("sgn", unop_sgn),
+    XENTRY("floor", unop_floor),
+    XENTRY("round", unop_round),
     XENTRY(NULL, NULL),
 };
 #undef XENTRY
@@ -390,7 +421,7 @@ static Node *node_new(char *value) noexcept {
 
     #define REG_INIT(RegP, Regexp) do { \
         if (!RegP) { \
-            RegP = new std::regex(Regexp); \
+            RegP = new (std::nothrow) std::regex(Regexp); \
             if (!RegP) { \
                 EPRINT("Out of memory\n"); \
                 exit(ENOMEM); \
@@ -515,7 +546,9 @@ void SymNode::exec(std::stack<Value>& stack) noexcept {
         stack.pop();
         SymBinop op = (SymBinop)this->op;
         Value res = op(lhs, rhs);
-        stack.push(res);
+        if (op != binop_end && op != binop_sep) {
+            stack.push(res);
+        }
     }
 }
 
@@ -644,6 +677,23 @@ static Value binop_bitor(Value& lhs, Value& rhs) noexcept {
     }
     case TYPE_INT:   return Value((Int)(lhs.number.i | rhs.number.i));
     case TYPE_UINT:  return Value((Uint)(lhs.number.u | rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_bitandinv(Value& lhs, Value& rhs) noexcept {
+    if (rhs.type == TYPE_STRING) {
+        rhs.unexpected_type();
+    }
+    switch (lhs.type) {
+    case TYPE_FLOAT: {
+        Value tmp = Value((Uint)(lhs.number.u & (~rhs.number.u)));
+        tmp.pun(TYPE_FLOAT);
+        return tmp;
+    }
+    case TYPE_INT:   return Value((Int)(lhs.number.i & (~rhs.number.i)));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u & (~rhs.number.u)));
     default: break;
     }
     return lhs.unexpected_type();
@@ -857,6 +907,39 @@ static Value binop_pun(Value& lhs, Value& rhs) noexcept {
     return rhs.unexpected_type();
 }
 
+static Value binop_sqrt(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_SQRT(lhs.number.f, rhs.number.f));
+    case TYPE_INT:   return Value((Int)FLOAT_SQRT((Float)lhs.number.i, (Float)rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)FLOAT_SQRT((Float)lhs.number.u, (Float)rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_gcd(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)gcd((unsigned long)lhs.number.f, (unsigned long)rhs.number.f));
+    case TYPE_INT:   return Value((Int)gcd((unsigned long)lhs.number.i, (unsigned long)rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)gcd((unsigned long)lhs.number.u, (unsigned long)rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_lcm(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)lcm((unsigned long)lhs.number.f, (unsigned long)rhs.number.f));
+    case TYPE_INT:   return Value((Int)lcm((unsigned long)lhs.number.i, (unsigned long)rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)lcm((unsigned long)lhs.number.u, (unsigned long)rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
 static Value unop_not(Value& lhs) noexcept {
     switch (lhs.type) {
     case TYPE_FLOAT: return Value((Float)!lhs.number.u);
@@ -889,6 +972,76 @@ static Value unop_end(Value& lhs) noexcept {
 static Value unop_sep(Value& lhs) noexcept {
     lhs.print();
     return Value();
+}
+
+static Value unop_sin(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_SIN(lhs.number.f);
+    case TYPE_INT:   return Value((Int)FLOAT_SIN((Float)lhs.number.i));
+    case TYPE_UINT:  return Value((Uint)FLOAT_SIN((Float)lhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_cos(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_COS(lhs.number.f);
+    case TYPE_INT:   return Value((Int)FLOAT_COS((Float)lhs.number.i));
+    case TYPE_UINT:  return Value((Uint)FLOAT_COS((Float)lhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_tan(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_TAN(lhs.number.f);
+    case TYPE_INT:   return Value((Int)FLOAT_TAN((Float)lhs.number.i));
+    case TYPE_UINT:  return Value((Uint)FLOAT_TAN((Float)lhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_abs(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)(lhs.number.f < FLOAT_ZERO ? (((Float)-1) * lhs.number.f) : lsh.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i < ((Int)0) ? (((Int)-1) * lhs.number.i) : lhs.number.i));
+    case TYPE_UINT:  return Value(lhs.number.u);
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_sgn(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)((lhs.number.f == FLOAT_ZERO) ? FLOAT_ZERO : ((lhs.number > FLOAT_ZERO) ? (Float)1 : (Float)-1);
+    case TYPE_INT:   return Value((Int)((lhs.number.i == (Int)0) ? (Int)0 : ((lhs.number > (Int)0) ? (Int)1 : (Int)-1));
+    case TYPE_UINT:  return Value((Uint)((lhs.number.u == (Uint)0) ? (Uint)0 : (Uint)1);
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_floor(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_FLOOR(lhs.number.f);
+    case TYPE_INT:   return Value(lhs.number.i);
+    case TYPE_UINT:  return Value(lhs.number.u);
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_round(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_ROUND(lhs.number.f);
+    case TYPE_INT:   return Value(lhs.number.i);
+    case TYPE_UINT:  return Value(lhs.number.u);
+    default: break;
+    }
+    return lhs.unexpected_type();
 }
 
 static bool op_isunary(SymOp op) noexcept {
