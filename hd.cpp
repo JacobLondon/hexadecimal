@@ -11,6 +11,7 @@ static RpnVtable *rpn = &rpn64;
 
 typedef void (* prog_func)(int argc, char **argv);
 
+static void func_rpn(int argc, char **argv) noexcept;
 static void func_help(int argc, char **argv) noexcept;
 static void func_32(int argc, char **argv) noexcept;
 static void func_64(int argc, char **argv) noexcept;
@@ -24,12 +25,13 @@ static char *arg_get(int argc, char **argv, const char *da, const char *ddarg) n
 
 static const char *ascii_lookup(int chr) noexcept;
 static void print_section(int number, const char *term) noexcept;
+static int get_pivot(int argc, char **argv) noexcept;
 
 #define XENTRY(Da, Ddarg, ProgFunc, Whatdo) { \
     (const char *)Da, \
     (const char *)Ddarg, \
     (prog_func)ProgFunc, \
-    (const char *)Whatdo\
+    (const char *)Whatdo \
 }
 static struct {
     const char *da;
@@ -40,19 +42,18 @@ static struct {
     XENTRY("-h", "--help", func_help, "View this help and exit"),
     XENTRY(NULL, "--32", func_32, "Set the operation word size to 32 bits"),
     XENTRY(NULL, "--64", func_64, "Set the operation word size to 64 bits (default)"),
-    XENTRY(NULL, "--ord", func_ord, "Get the code of the first character and exit"),
     XENTRY(NULL, "--chr", func_chr, "Get the character of the first number and exit"),
-    XENTRY("-v", "--verbose", func_verbose, "Display errors"),
+    XENTRY(NULL, "--ord", func_ord, "Get the code of the first character and exit"),
+    XENTRY("-r", "--rpn", func_rpn, "Parse the arguments in Reverse Polish Notation (RPN)"),
     XENTRY(NULL, "--table", func_table, "Get the ASCII table and exit"),
     XENTRY(NULL, "--extable", func_extable, "Get the ASCII table and its extended set and exit"),
+    XENTRY("-v", "--verbose", func_verbose, "Display errors"),
     XENTRY(NULL, NULL, NULL, NULL)
 };
 #undef XENTRY
 
 int main(int argc, char **argv)
 {
-    int pivot;
-
     if (argc <= 1) {
         func_help(1, NULL);
     }
@@ -60,20 +61,19 @@ int main(int argc, char **argv)
     for (int i = 0; argTable[i].program != NULL; i++) {
         int ndx = arg_check(argc, argv, argTable[i].da, argTable[i].ddarg);
         if (ndx) {
-            argTable[i].program(argc - i, &argv[ndx]);
+            argTable[i].program(argc - ndx, &argv[ndx]);
         }
     }
 
-    // find pivot...
-    auto re = std::regex(REG_NUM);
-    for (int i = 0; i < argc; i++) {
-        if (std::regex_match(argv[i], re)) {
-            pivot = i;
-            break;
-        }
-    }
+    func_rpn(argc, argv);
 
+    return 0;
+}
+
+static void func_rpn(int argc, char **argv) noexcept {
+    int pivot = get_pivot(argc, argv);
     void *calc = rpn->create();
+
     for (int i = pivot; i < argc; i++) {
         rpn->push(calc, (char *)argv[i]);
     }
@@ -81,8 +81,7 @@ int main(int argc, char **argv)
     rpn->exec(calc);
     rpn->print(calc);
     rpn->destroy(calc);
-
-    return 0;
+    exit(0);
 }
 
 static void func_help(int argc, char **argv) noexcept {
@@ -252,4 +251,24 @@ static const char *ascii_lookup(int chr) noexcept {
 static void print_section(int number, const char *term) noexcept {
     assert(term);
     fprintf(stdout, "%3d %2X %03o %5s%s", number, number, number, ascii_lookup(number), term);
+}
+
+static int get_pivot(int argc, char **argv) noexcept {
+    int pivot = -1;
+
+    // find pivot...
+    auto re = std::regex(REG_NUM);
+    for (int i = 0; i < argc; i++) {
+        if (std::regex_match(argv[i], re)) {
+            pivot = i;
+            break;
+        }
+    }
+
+    if (pivot == -1) {
+        fprintf(stderr, "Missing PROGRAM\n");
+        exit(1);
+    }
+
+    return pivot;
 }

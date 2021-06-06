@@ -1,4 +1,5 @@
-#include "math.hpp"
+#include <stdint.h>
+#include "util.hpp"
 
 /**
  * From Linux kernel int_pow.c
@@ -72,4 +73,17 @@ void swap(unsigned long *a, unsigned long *b)
 	tmp = *a;
 	*a = *b;
 	*b = tmp;
+}
+
+bool is_little_endian(void)
+{
+	const uint16_t value = 0x01;
+	const void *const address = (const void *const)&value;
+	const unsigned char *const least = (const unsigned char *const)(address);
+	return (*least == 0x01);
+}
+
+bool is_big_endian(void)
+{
+	return !is_little_endian();
 }

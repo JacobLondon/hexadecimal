@@ -6,4 +6,7 @@ unsigned long gcd(unsigned long a, unsigned long b);
 unsigned long lcm(unsigned long a, unsigned long b);
 void swap(unsigned long *a, unsigned long *b);
 
+bool is_little_endian(void);
+bool is_big_endian(void);
+
 #endif // HD_MATH_H

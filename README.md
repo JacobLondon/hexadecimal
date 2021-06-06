@@ -41,5 +41,16 @@ $ hd --chr 97
 a
 ```
 
+Constants `pi e nan inf` are supported, but cannot exist as the first pivotal argument due to a missing feature.
+
+```bash
+hd nan
+Missing PROGRAM
+
+hd 0 nan hex as
+0x7FF8000000000000
+```
+
 ## TODO
 * Allow underscores to make it easier to enter and display
+* Add logarithms (ln: log_e, log: log_10)

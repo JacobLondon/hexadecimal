@@ -12,4 +12,4 @@
 #include <strings.h> // strcasecmp
 
 #include "rpn.hpp"
-#include "math.hpp"
+#include "util.hpp"
