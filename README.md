@@ -54,3 +54,4 @@ hd 0 nan hex as
 ## TODO
 * Allow underscores to make it easier to enter and display
 * Add logarithms (ln: log_e, log: log_10)
+* Make 'ord' and 'chr' an operation
