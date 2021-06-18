@@ -18,7 +18,7 @@ FILES=*.cpp
 all: $(TARGET)
 
 $(TARGET):
-	$(CC) -o $@ $(FILES)
+	$(CC) -o $@ $(FILES) $(CFLAGS)
 
 clean:
 	rm -f $(TARGET)
