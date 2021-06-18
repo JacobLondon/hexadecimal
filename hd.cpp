@@ -3,15 +3,19 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <iostream>
 #include "rpn.hpp"
+#include "token.hpp"
 
 static RpnVtable rpn64 = RPN_VTABLE(64);
 static RpnVtable rpn32 = RPN_VTABLE(32);
 static RpnVtable *rpn = &rpn64;
+bool _verbose = false; // extern
 
 typedef void (* prog_func)(int argc, char **argv);
 
 static void func_rpn(int argc, char **argv) noexcept;
+static void func_tok(int argc, char **argv) noexcept;
 static void func_help(int argc, char **argv) noexcept;
 static void func_32(int argc, char **argv) noexcept;
 static void func_64(int argc, char **argv) noexcept;
@@ -44,28 +48,34 @@ static struct {
     XENTRY(NULL, "--64", func_64, "Set the operation word size to 64 bits (default)"),
     XENTRY(NULL, "--chr", func_chr, "Get the character of the first number and exit"),
     XENTRY(NULL, "--ord", func_ord, "Get the code of the first character and exit"),
-    XENTRY("-r", "--rpn", func_rpn, "Parse the arguments in Reverse Polish Notation (RPN)"),
     XENTRY(NULL, "--table", func_table, "Get the ASCII table and exit"),
     XENTRY(NULL, "--extable", func_extable, "Get the ASCII table and its extended set and exit"),
     XENTRY("-v", "--verbose", func_verbose, "Display errors"),
+    XENTRY("-r", "--rpn", func_rpn, "Parse the arguments in Reverse Polish Notation (RPN)"),
+    XENTRY("-t", "--tok", func_tok, "Explicitly through tokenization (default)"),
     XENTRY(NULL, NULL, NULL, NULL)
 };
 #undef XENTRY
 
 int main(int argc, char **argv)
 {
+    int pivot = 0;
     if (argc <= 1) {
         func_help(1, NULL);
+        exit(1);
     }
 
     for (int i = 0; argTable[i].program != NULL; i++) {
         int ndx = arg_check(argc, argv, argTable[i].da, argTable[i].ddarg);
         if (ndx) {
+            if (ndx > pivot) {
+                pivot = ndx;
+            }
             argTable[i].program(argc - ndx, &argv[ndx]);
         }
     }
 
-    func_rpn(argc, argv);
+    func_tok(argc - pivot, &argv[pivot]);
 
     return 0;
 }
@@ -81,6 +91,49 @@ static void func_rpn(int argc, char **argv) noexcept {
     rpn->exec(calc);
     rpn->print(calc);
     rpn->destroy(calc);
+    exit(0);
+}
+
+static void func_tok(int argc, char **argv) noexcept {
+    void *tokenizer = tokenizer_create();
+    if (!tokenizer) {
+        if (_verbose) {
+            fprintf(stderr, "Out of memory\n");
+        }
+        exit(ENOMEM);
+    }
+
+    for (int i = 1; i < argc; i++) {
+        if (tokenizer_tokenize(tokenizer, argv[i], _verbose) != 0) {
+            exit(1);
+        }
+    }
+    tokenizer_end(tokenizer);
+    void *calc = rpn->create();
+
+    size_t cursor = 0;
+    Token *tmp;
+    do {
+        tmp = tokenizer_gettok(tokenizer, &cursor);
+        switch (tmp->token) {
+        case TOKEN_VALUE: // fallthrough
+        case TOKEN_UNOP: // fallthrough
+        case TOKEN_BINOP:
+            rpn->push(calc, (char *)tmp->value.c_str());
+            break;
+        case TOKEN_UNKN: // fallthrough
+        case TOKEN_LPAREN: // fallthrough
+        case TOKEN_RPAREN: // fallthrough
+        case TOKEN_EOF: // fallthrough
+        default:
+            break;
+        }
+    } while (tmp && tmp->token != TOKEN_EOF);
+
+    rpn->exec(calc);
+    rpn->print(calc);
+    rpn->destroy(calc);
+    tokenizer_destroy(tokenizer);
     exit(0);
 }
 
@@ -144,8 +197,7 @@ static void func_chr(int argc, char **argv) noexcept {
 }
 
 static void func_verbose(int argc, char **argv) noexcept {
-    rpn32.set_verbose(true);
-    rpn64.set_verbose(true);
+    _verbose = true;
 }
 
 static void func_table(int argc, char **argv) noexcept {

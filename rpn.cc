@@ -183,8 +183,6 @@ static Value unop_round(Value& lhs) noexcept;
 static bool op_isunary(SymOp op) noexcept;
 static bool op_isbinary(SymOp op) noexcept;
 
-static bool _verbose = false;
-
 static SymBinop binopTable[] = {
     binop_none,
     binop_add,
@@ -370,10 +368,6 @@ void rpn_print(Rpn *self) noexcept {
 void rpn_destroy(Rpn *self) noexcept {
     assert(self);
     delete self;
-}
-
-void rpn_set_verbose(bool verbose) noexcept {
-    _verbose = verbose;
 }
 
 void rpn_help() noexcept {

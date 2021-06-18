@@ -30,6 +30,9 @@ $ hd 10.2 bin as
 $ hd 10 sep 50 sep 100
 0xA 0x32 0x64
 
+$ hd "10, 50, 100"
+0xA 0x32 0x64
+
 $ hd 10 sep 50 end 100
 0xA 0x32
 0x64
@@ -41,13 +44,12 @@ $ hd --chr 97
 a
 ```
 
-Constants `pi e nan inf` are supported, but cannot exist as the first pivotal argument due to a missing feature.
-
+Constants `pi e nan inf` are supported
 ```bash
 hd nan
-Missing PROGRAM
+nan
 
-hd 0 nan hex as
+hd nan hex as
 0x7FF8000000000000
 ```
 
