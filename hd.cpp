@@ -257,7 +257,7 @@ static int get_pivot(int argc, char **argv) noexcept {
     int pivot = -1;
 
     // find pivot...
-    auto re = std::regex(REG_NUM);
+    auto re = std::regex(REG_PIVOT);
     for (int i = 0; i < argc; i++) {
         if (std::regex_match(argv[i], re)) {
             pivot = i;

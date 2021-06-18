@@ -6,10 +6,11 @@
 #define REG_HEX "(0[xX][0123456789aAbBcCdDeEfF]+)"
 #define REG_DEC "([+-]?((0)|([123456789][1234567890]*)))"
 
+#define REG_CONSTANT "pi|e|inf|nan"
 #define REG_UNSIGNED "(0|([123456789][0123456789]*))"
 #define REG_SIGNED "([+-](0|([123456789][0123456789]*)))"
 #define REG_FLOAT "([+-]?((0?\\.[0123456789]+)|((0\\.)|([123456789][0123456789]*\\.[0123456789]*))))"
-#define REG_NUM "^(" REG_BIN "|" REG_OCT "|" REG_HEX "|" REG_FLOAT "|" REG_DEC ")$"
+#define REG_PIVOT "^(" REG_BIN "|" REG_OCT "|" REG_HEX "|" REG_FLOAT "|" REG_DEC "|" REG_CONSTANT ")$"
 
 #define REG_OP_ADD_SYM "+"
 #define REG_OP_ADD "add"
