@@ -58,3 +58,5 @@ hd nan hex as
 * Add logarithms (ln: log_e, log: log_10)
 * Make 'ord' and 'chr' an operation
 * Eliminate undefined or unexpected behavior in rpn program
+* Pivot point can't find negative numbers
+* `./hd -v 0 -1 abs` should work, but it also thinks this is a binary op error.
