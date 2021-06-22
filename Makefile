@@ -1,6 +1,7 @@
 TARGET=hd
-CC=g++
-CFLAGS=\
+CXX=g++
+CXXFLAGS=\
+	-std=c++11 \
 	-Wall \
 	-Wextra \
 	-ggdb \
@@ -18,7 +19,7 @@ FILES=*.cpp
 all: $(TARGET)
 
 $(TARGET):
-	$(CC) -o $@ $(FILES) $(CFLAGS)
+	$(CXX) -o $@ $(FILES) $(CXXFLAGS)
 
 clean:
 	rm -f $(TARGET)
