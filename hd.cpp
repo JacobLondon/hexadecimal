@@ -141,6 +141,8 @@ static void func_help(int argc, char **argv) noexcept {
     char buf[256];
     int n;
 
+    (void)argv;
+
     fprintf(stderr,
         "Hexadecimal -- representation utility\n\n"
         "\thd [OPTIONS] [PROGRAM]\n\n"
@@ -167,20 +169,27 @@ static void func_help(int argc, char **argv) noexcept {
 }
 
 static void func_32(int argc, char **argv) noexcept {
+    (void)argc;
+    (void)argv;
     rpn = &rpn32;
 }
 
 static void func_64(int argc, char **argv) noexcept {
+    (void)argc;
+    (void)argv;
     rpn = &rpn64;
 }
 
 static void func_ord(int argc, char **argv) noexcept {
+    (void)argc;
+    (void)argv;
     printf("%d\n", argv[1][0]);
     exit(0);
 }
 
 static void func_chr(int argc, char **argv) noexcept {
     int chr;
+    (void)argc;
     if (sscanf(argv[1], "%d", &chr) != 1) {
         fprintf(stderr, "'%s' cannot be converted to a code\n", argv[1]);
         exit(1);
@@ -197,10 +206,14 @@ static void func_chr(int argc, char **argv) noexcept {
 }
 
 static void func_verbose(int argc, char **argv) noexcept {
+    (void)argc;
+    (void)argv;
     _verbose = true;
 }
 
 static void func_table(int argc, char **argv) noexcept {
+    (void)argc;
+    (void)argv;
     for (int i = 0; i < 128 / 4; i++) {
         print_section(i, "\t");
         print_section(i + 128 / 4, "\t");
@@ -212,6 +225,8 @@ static void func_table(int argc, char **argv) noexcept {
 }
 
 static void func_extable(int argc, char **argv) noexcept {
+    (void)argc;
+    (void)argv;
     func_table(0, NULL);
     for (int i = 128; i < 128 + 128 / 4; i++) {
         print_section(i, "\t");

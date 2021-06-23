@@ -10,21 +10,17 @@ enum TokenizerToken {
     TOKEN_BINOP,
     TOKEN_LPAREN,
     TOKEN_RPAREN,
-    TOKEN_EOF
+    TOKEN_EOF,
+    TOKEN_COUNT
 };
 
 struct Token {
     std::string value;
     TokenizerToken token;
-    Token() :
-        value(""),
-        token(TOKEN_EOF) {}
-    Token(char *value, TokenizerToken token) :
-        value(value),
-        token(token) {}
-    Token(std::string&& value, TokenizerToken token) :
-        value(value),
-        token(token) {}
+    int precedence;
+    Token();
+    Token(char *value, TokenizerToken token, int precedence);
+    Token(std::string&& value, TokenizerToken token, int precedence);
 };
 
 void *tokenizer_create(void) noexcept;
