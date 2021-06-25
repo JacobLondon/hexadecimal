@@ -33,6 +33,7 @@ static int tokPrecedenceTable[] = {
  */
 #define TK(prec, str, tok) {str, tok, prec}
 
+static Token tok_LPAREN             TK(500, "(", TOKEN_LPAREN);
 // functions
 static Token tok_SQRT               TK(400, REG_OP_SQRT, TOKEN_UNOP);
 static Token tok_SIN                TK(400, REG_OP_SIN, TOKEN_UNOP);
@@ -103,6 +104,10 @@ static Token tok_END                TK(130, REG_OP_END, TOKEN_UNOP);
 static Token tok_SEP_SYM            TK(130, REG_OP_SEP_SYM, TOKEN_UNOP);
 static Token tok_SEP                TK(130, REG_OP_SEP, TOKEN_UNOP);
 
+/**
+ * Tokens in tokenization order to prevent conflicts
+ * ie. &~ and && before &
+ */
 static Token *tokenTable[] = {
     &tok_BITANDINV_SYM,
     &tok_BITANDINV,
