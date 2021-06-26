@@ -1,5 +1,4 @@
 
-
 BINARY: /0[bB][01]+/
 OCTAL: /0[oO][01234567]+/
 HEXADECIMAL: /0[xX][0123456789abcdefABCDEF]+/
@@ -20,7 +19,6 @@ number: BINARY
     | CONSTANT
     | TYPE
     | FORMAT
-
 
 // decreasing precedence
 !binary_func: "gcd" | "lcm"
@@ -86,7 +84,7 @@ value: value binary_or value
     | value binary_mul value
     | value binary_pow value
     | value binary_conv value
-    | binary_func value value
+    | value binary_func value
     | unary_op value
     | unary_func value
     | number
