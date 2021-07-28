@@ -25,7 +25,7 @@ static void func_verbose(int argc, char **argv) noexcept;
 static void func_table(int argc, char **argv) noexcept;
 static void func_extable(int argc, char **argv) noexcept;
 static int arg_check(int argc, char **argv, const char *da, const char *ddarg) noexcept;
-static char *arg_get(int argc, char **argv, const char *da, const char *ddarg) noexcept;
+//static char *arg_get(int argc, char **argv, const char *da, const char *ddarg) noexcept;
 
 static const char *ascii_lookup(int chr) noexcept;
 static void print_section(int number, const char *term) noexcept;
@@ -248,6 +248,7 @@ static int arg_check(int argc, char **argv, const char *da, const char *ddarg) n
     return 0;
 }
 
+#if 0
 static char *arg_get(int argc, char **argv, const char *da, const char *ddarg) noexcept {
     int i;
     for (i = 0; i < argc; i++) {
@@ -257,6 +258,7 @@ static char *arg_get(int argc, char **argv, const char *da, const char *ddarg) n
     }
     return NULL;
 }
+#endif
 
 static const char *ascii_lookup(int chr) noexcept {
     static bool firstTime = true;

@@ -78,8 +78,8 @@ void swap(unsigned long *a, unsigned long *b)
 bool is_little_endian(void)
 {
 	const uint16_t value = 0x01;
-	const void *const address = (const void *const)&value;
-	const unsigned char *const least = (const unsigned char *const)(address);
+	const void *const address = (const void *const)(void *)&value;
+	const unsigned char *const least = (const unsigned char *const)(void *)(address);
 	return (*least == 0x01);
 }
 

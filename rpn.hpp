@@ -80,6 +80,8 @@
 #define REG_OP_SGN "sgn"
 #define REG_OP_FLOOR "floor"
 #define REG_OP_ROUND "round"
+//#define REG_OP_CHR "chr"
+#define REG_OP_ORD "ord"
 
 struct RpnVtable {
     void *(* create)() noexcept;

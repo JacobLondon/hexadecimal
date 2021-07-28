@@ -115,6 +115,7 @@ struct Value {
 
 struct Node {
     virtual void exec(std::stack<Value>& stack) noexcept = 0;
+    virtual ~Node() = default;
 };
 
 typedef Value (* SymOp)(void);
@@ -142,7 +143,7 @@ static void print_reversed(Uint value) noexcept;
 static Node *node_new(char *value) noexcept;
 static void node_free(Node *self) noexcept;
 
-static Value binop_none(Value& lhs, Value& rhs) noexcept;
+//static Value binop_none(Value& lhs, Value& rhs) noexcept;
 static Value binop_add(Value& lhs, Value& rhs) noexcept;
 static Value binop_sub(Value& lhs, Value& rhs) noexcept;
 static Value binop_mul(Value& lhs, Value& rhs) noexcept;
@@ -180,9 +181,12 @@ static Value unop_abs(Value& lhs) noexcept;
 static Value unop_sgn(Value& lhs) noexcept;
 static Value unop_floor(Value& lhs) noexcept;
 static Value unop_round(Value& lhs) noexcept;
+static Value unop_ord(Value &lhs) noexcept;
+//static Value unop_chr(Value &lhs) noexcept;
 static bool op_isunary(SymOp op) noexcept;
-static bool op_isbinary(SymOp op) noexcept;
+//static bool op_isbinary(SymOp op) noexcept;
 
+#if 0
 static SymBinop binopTable[] = {
     binop_none,
     binop_add,
@@ -211,6 +215,7 @@ static SymBinop binopTable[] = {
     binop_lcm,
     NULL,
 };
+#endif
 
 static SymUnop unopTable[] = {
     unop_not,
@@ -225,6 +230,8 @@ static SymUnop unopTable[] = {
     unop_sgn,
     unop_floor,
     unop_round,
+    unop_ord,
+    //unop_chr,
     NULL,
 };
 
@@ -292,6 +299,8 @@ static struct {
     XENTRY(REG_OP_SGN, unop_sgn),
     XENTRY(REG_OP_FLOOR, unop_floor),
     XENTRY(REG_OP_ROUND, unop_round),
+    XENTRY(REG_OP_ORD, unop_ord),
+    //XENTRY(REG_OP_CHR, unop_chr),
     XENTRY(NULL, NULL),
 };
 #undef XENTRY
@@ -569,9 +578,13 @@ void NumNode::exec(std::stack<Value>& stack) noexcept {
     stack.push(this->value);
 }
 
+#if 0
 static Value binop_none(Value& lhs, Value& rhs) noexcept {
+    (void)lhs;
+    (void)rhs;
     return Value();
 }
+#endif
 
 static Value binop_add(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
@@ -1075,6 +1088,17 @@ static Value unop_round(Value& lhs) noexcept {
     return lhs.unexpected_type();
 }
 
+static Value unop_ord(Value &lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return lhs.unexpected_type();
+    case TYPE_INT:   return lhs.unexpected_type();
+    case TYPE_UINT:  return lhs.unexpected_type();
+    case TYPE_STRING: return Value((Int)lhs.number.s[0]); // ascii only :/
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
 static bool op_isunary(SymOp op) noexcept {
     for (size_t i = 0; unopTable[i] != NULL; i++) {
         if (unopTable[i] == (SymUnop)op) {
@@ -1084,9 +1108,11 @@ static bool op_isunary(SymOp op) noexcept {
     return false;
 }
 
+#if 0
 static bool op_isbinary(SymOp op) noexcept {
     return !op_isunary(op);
 }
+#endif
 
 Value::Value() noexcept :
     number{0},

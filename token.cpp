@@ -50,6 +50,7 @@ static Token tok_NOT_SYM            TK(370, REG_OP_NOT_SYM, TOKEN_UNOP);
 static Token tok_NOT                TK(370, REG_OP_NOT, TOKEN_UNOP);
 static Token tok_INV_SYM            TK(370, REG_OP_INV_SYM, TOKEN_UNOP);
 static Token tok_INV                TK(370, REG_OP_INV, TOKEN_UNOP);
+static Token tok_ORD                TK(370, REG_OP_ORD, TOKEN_UNOP);
 // conversion
 static Token tok_CAST               TK(350, REG_OP_CAST, TOKEN_BINOP);
 static Token tok_AS                 TK(350, REG_OP_AS, TOKEN_BINOP);
@@ -152,6 +153,7 @@ static Token *tokenTable[] = {
     &tok_NOT,
     &tok_INV_SYM,
     &tok_INV,
+    &tok_ORD,
 
     &tok_GT_SYM,
     &tok_GT,
@@ -189,8 +191,8 @@ Token::Token() :
 
 }
 
-Token::Token(char *value, TokenizerToken token, int precedence) :
-    value(value),
+Token::Token(const char *value, TokenizerToken token, int precedence) :
+    value((char *)value),
     token(token),
     precedence(precedence)
 {}
@@ -198,11 +200,12 @@ Token::Token(char *value, TokenizerToken token, int precedence) :
 Token::Token(std::string&& value, TokenizerToken token, int precedence) :
     value(value),
     token(token),
-    precedence(0)
+    precedence(precedence)
 {}
 
 struct Tokenizer {
     std::vector<Token> tokens;
+    Tokenizer() : tokens{} {}
 };
 
 void *tokenizer_create(void) noexcept {

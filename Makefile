@@ -1,10 +1,13 @@
 TARGET=hd
 CXX=g++
 CXXFLAGS=\
+	-Wall -Wextra \
+	-Wno-switch \
+	-Wno-cast-function-type \
+	-Wno-ignored-qualifiers \
 	-std=c++11 \
-	-Wall \
-	-Wextra \
-	-ggdb \
+	-march=native \
+	-pipe \
 	-lm
 
 ifdef PREFIX
@@ -12,17 +15,21 @@ MYPREFIX=$(PREFIX)
 else
 MYPREFIX=/usr/local
 endif
-FILES=*.cpp
 
-.PHONY: all $(TARGET) clean install uninstall
+MYOBJS=util.o token.o hd.o
+
+.PHONY: clean install uninstall
 
 all: $(TARGET)
 
-$(TARGET):
-	$(CXX) -o $@ $(FILES) $(CXXFLAGS)
+MID_OBJS=rpn32.o rpn64.o
+$(MID_OBJS): rpn.cc
+
+$(TARGET): $(MYOBJS) $(MID_OBJS)
+	$(CXX) -o $@ $^ $(CXXFLAGS)
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) *.o a.out hd.exe hd
 
 install: $(TARGET)
 	cp -f $(TARGET) $(MYPREFIX)/bin/

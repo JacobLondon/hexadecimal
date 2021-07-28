@@ -19,7 +19,7 @@ struct Token {
     TokenizerToken token;
     int precedence;
     Token();
-    Token(char *value, TokenizerToken token, int precedence);
+    Token(const char *value, TokenizerToken token, int precedence);
     Token(std::string&& value, TokenizerToken token, int precedence);
 };
 

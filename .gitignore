@@ -5,3 +5,4 @@ a.out
 *.swp
 hd
 test.cc
+*.o
