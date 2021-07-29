@@ -19,6 +19,8 @@ typedef uint32_t Uint;
 #define FLOAT_TAN(...) tanf(__VA_ARGS__)
 #define FLOAT_FLOOR(...) floorf(__VA_ARGS__)
 #define FLOAT_ROUND(...) roundf(__VA_ARGS__)
+#define FLOAT_LOG10(...) log10f(__VA_ARGS__)
+#define FLOAT_LOG(...) logf(__VA_ARGS__)
 #define FLOAT_ZERO 0.0f
 #else
 typedef double Float;
@@ -37,6 +39,8 @@ typedef uint64_t Uint;
 #define FLOAT_TAN(...) tan(__VA_ARGS__)
 #define FLOAT_FLOOR(...) floor(__VA_ARGS__)
 #define FLOAT_ROUND(...) round(__VA_ARGS__)
+#define FLOAT_LOG10(...) log10(__VA_ARGS__)
+#define FLOAT_LOG(...) log(__VA_ARGS__)
 #define FLOAT_ZERO 0.0
 #endif
 #define FMT_STRING "%s"
@@ -183,6 +187,8 @@ static Value unop_floor(Value& lhs) noexcept;
 static Value unop_round(Value& lhs) noexcept;
 static Value unop_ord(Value &lhs) noexcept;
 //static Value unop_chr(Value &lhs) noexcept;
+static Value unop_ln(Value &lhs) noexcept;
+static Value unop_log(Value &lhs) noexcept;
 static bool op_isunary(SymOp op) noexcept;
 //static bool op_isbinary(SymOp op) noexcept;
 
@@ -232,6 +238,8 @@ static SymUnop unopTable[] = {
     unop_round,
     unop_ord,
     //unop_chr,
+    unop_ln,
+    unop_log,
     NULL,
 };
 
@@ -301,6 +309,8 @@ static struct {
     XENTRY(REG_OP_ROUND, unop_round),
     XENTRY(REG_OP_ORD, unop_ord),
     //XENTRY(REG_OP_CHR, unop_chr),
+    XENTRY(REG_OP_LN, unop_ln),
+    XENTRY(REG_OP_LOG, unop_log),
     XENTRY(NULL, NULL),
 };
 #undef XENTRY
@@ -931,8 +941,8 @@ static Value binop_pun(Value& lhs, Value& rhs) noexcept {
 static Value unop_sqrt(Value& lhs) noexcept {
     switch (lhs.type) {
     case TYPE_FLOAT: return Value((Float)FLOAT_SQRT(lhs.number.f));
-    case TYPE_INT:   return Value((Int)FLOAT_SQRT((Float)lhs.number.i));
-    case TYPE_UINT:  return Value((Uint)FLOAT_SQRT((Float)lhs.number.u));
+    case TYPE_INT:   return Value((Float)FLOAT_SQRT((Float)lhs.number.i));
+    case TYPE_UINT:  return Value((Float)FLOAT_SQRT((Float)lhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();
@@ -997,8 +1007,8 @@ static Value unop_sep(Value& lhs) noexcept {
 static Value unop_sin(Value& lhs) noexcept {
     switch (lhs.type) {
     case TYPE_FLOAT: return Value((Float)FLOAT_SIN(lhs.number.f));
-    case TYPE_INT:   return Value((Int)FLOAT_SIN((Float)lhs.number.i));
-    case TYPE_UINT:  return Value((Uint)FLOAT_SIN((Float)lhs.number.u));
+    case TYPE_INT:   return Value((Float)FLOAT_SIN((Float)lhs.number.i));
+    case TYPE_UINT:  return Value((Float)FLOAT_SIN((Float)lhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();
@@ -1007,8 +1017,8 @@ static Value unop_sin(Value& lhs) noexcept {
 static Value unop_cos(Value& lhs) noexcept {
     switch (lhs.type) {
     case TYPE_FLOAT: return Value((Float)FLOAT_COS(lhs.number.f));
-    case TYPE_INT:   return Value((Int)FLOAT_COS((Float)lhs.number.i));
-    case TYPE_UINT:  return Value((Uint)FLOAT_COS((Float)lhs.number.u));
+    case TYPE_INT:   return Value((Float)FLOAT_COS((Float)lhs.number.i));
+    case TYPE_UINT:  return Value((Float)FLOAT_COS((Float)lhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();
@@ -1017,8 +1027,8 @@ static Value unop_cos(Value& lhs) noexcept {
 static Value unop_tan(Value& lhs) noexcept {
     switch (lhs.type) {
     case TYPE_FLOAT: return Value((Float)FLOAT_TAN(lhs.number.f));
-    case TYPE_INT:   return Value((Int)FLOAT_TAN((Float)lhs.number.i));
-    case TYPE_UINT:  return Value((Uint)FLOAT_TAN((Float)lhs.number.u));
+    case TYPE_INT:   return Value((Float)FLOAT_TAN((Float)lhs.number.i));
+    case TYPE_UINT:  return Value((Float)FLOAT_TAN((Float)lhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();
@@ -1094,6 +1104,26 @@ static Value unop_ord(Value &lhs) noexcept {
     case TYPE_INT:   return lhs.unexpected_type();
     case TYPE_UINT:  return lhs.unexpected_type();
     case TYPE_STRING: return Value((Int)lhs.number.s[0]); // ascii only :/
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_ln(Value &lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_LOG(lhs.number.f));
+    case TYPE_INT:   return Value((Float)FLOAT_LOG(lhs.number.i));
+    case TYPE_UINT:  return Value((Float)FLOAT_LOG(lhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_log(Value &lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_LOG10(lhs.number.f));
+    case TYPE_INT:   return Value((Float)FLOAT_LOG10(lhs.number.i));
+    case TYPE_UINT:  return Value((Float)FLOAT_LOG10(lhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();

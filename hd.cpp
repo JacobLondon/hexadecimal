@@ -29,7 +29,7 @@ static int arg_check(int argc, char **argv, const char *da, const char *ddarg) n
 
 static const char *ascii_lookup(int chr) noexcept;
 static void print_section(int number, const char *term) noexcept;
-static int get_pivot(int argc, char **argv) noexcept;
+//static int get_pivot(int argc, char **argv) noexcept;
 
 #define XENTRY(Da, Ddarg, ProgFunc, Whatdo) { \
     (const char *)Da, \
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
 }
 
 static void func_rpn(int argc, char **argv) noexcept {
-    int pivot = get_pivot(argc, argv);
+    int pivot = 1; // always 1 after '-r / --rpn' arg
     void *calc = rpn->create();
 
     for (int i = pivot; i < argc; i++) {
@@ -322,6 +322,7 @@ static void print_section(int number, const char *term) noexcept {
     fprintf(stdout, "%3d %2X %03o %5s%s", number, number, number, ascii_lookup(number), term);
 }
 
+#if 0
 static int get_pivot(int argc, char **argv) noexcept {
     int pivot = -1;
 
@@ -341,3 +342,4 @@ static int get_pivot(int argc, char **argv) noexcept {
 
     return pivot;
 }
+#endif

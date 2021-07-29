@@ -82,6 +82,8 @@
 #define REG_OP_ROUND "round"
 //#define REG_OP_CHR "chr"
 #define REG_OP_ORD "ord"
+#define REG_OP_LN "ln"
+#define REG_OP_LOG "log"
 
 struct RpnVtable {
     void *(* create)() noexcept;
