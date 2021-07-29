@@ -43,7 +43,7 @@ $ hd --ord a
 $ hd --chr 97
 a
 
-# RPN-only features calling org on ASCII:
+# RPN-only features calling ord on ASCII:
 $ hd --rpn a ord A ord sub
 32
 
