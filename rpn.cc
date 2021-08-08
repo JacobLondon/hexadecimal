@@ -22,6 +22,14 @@ typedef uint32_t Uint;
 #define FLOAT_LOG10(...) log10f(__VA_ARGS__)
 #define FLOAT_LOG(...) logf(__VA_ARGS__)
 #define FLOAT_ZERO 0.0f
+union FloatInfo { // on a Big Endian machine will need to convert to LE first
+    Float f;
+    struct {
+        Uint mantissa : 23;
+        Uint exponent : 8;
+        Uint sign : 1;
+    } parts;
+};
 #else
 typedef double Float;
 typedef int64_t Int;
@@ -42,6 +50,14 @@ typedef uint64_t Uint;
 #define FLOAT_LOG10(...) log10(__VA_ARGS__)
 #define FLOAT_LOG(...) log(__VA_ARGS__)
 #define FLOAT_ZERO 0.0
+union FloatInfo {
+    Float f;
+    struct {
+        Uint mantissa : 52;
+        Uint exponent : 11;
+        Uint sign : 1;
+    } parts;
+};
 #endif
 #define FMT_STRING "%s"
 
@@ -189,6 +205,10 @@ static Value unop_ord(Value &lhs) noexcept;
 //static Value unop_chr(Value &lhs) noexcept;
 static Value unop_ln(Value &lhs) noexcept;
 static Value unop_log(Value &lhs) noexcept;
+static Value unop_info(Value &lhs) noexcept;
+static Value unop_fsgn(Value &lhs) noexcept;
+static Value unop_fexp(Value &lhs) noexcept;
+static Value unop_fmant(Value &lhs) noexcept;
 static bool op_isunary(SymOp op) noexcept;
 //static bool op_isbinary(SymOp op) noexcept;
 
@@ -240,6 +260,10 @@ static SymUnop unopTable[] = {
     //unop_chr,
     unop_ln,
     unop_log,
+    unop_info,
+    unop_fsgn,
+    unop_fexp,
+    unop_fmant,
     NULL,
 };
 
@@ -311,6 +335,10 @@ static struct {
     //XENTRY(REG_OP_CHR, unop_chr),
     XENTRY(REG_OP_LN, unop_ln),
     XENTRY(REG_OP_LOG, unop_log),
+    XENTRY(REG_OP_INFO, unop_info),
+    XENTRY(REG_OP_FSGN, unop_fsgn),
+    XENTRY(REG_OP_FEXP, unop_fexp),
+    XENTRY(REG_OP_FMANT, unop_fmant),
     XENTRY(NULL, NULL),
 };
 #undef XENTRY
@@ -1124,6 +1152,72 @@ static Value unop_log(Value &lhs) noexcept {
     case TYPE_FLOAT: return Value((Float)FLOAT_LOG10(lhs.number.f));
     case TYPE_INT:   return Value((Float)FLOAT_LOG10(lhs.number.i));
     case TYPE_UINT:  return Value((Float)FLOAT_LOG10(lhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_info(Value &lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: {
+        FloatInfo fi;
+        fi.f = lhs.number.f;
+        fprintf(stdout, FMT_UINT ", " FMT_UINT ", " FMT_UINT "\n",
+            fi.parts.sign, fi.parts.exponent, fi.parts.mantissa);
+        fprintf(stdout, FMT_HEX ", 0x" FMT_HEX ", 0x" FMT_HEX "\n",
+            fi.parts.sign, fi.parts.exponent, fi.parts.mantissa);
+        fflush(stdout);
+        return lhs;
+    }
+    case TYPE_INT: {
+        lhs.println();
+        return lhs;
+    }
+    case TYPE_UINT: {
+        lhs.println();
+        return lhs;
+    }
+    case TYPE_STRING:
+        fprintf(stdout, "%s\n", lhs.number.s);
+        fflush(stdout);
+        return lhs;
+    default:
+        break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_fsgn(Value &lhs) noexcept {
+    FloatInfo fi;
+    fi.f = lhs.number.f;
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)(fi.parts.sign));
+    case TYPE_INT:   return Value((Int)(fi.parts.sign));
+    case TYPE_UINT:  return Value((Uint)(fi.parts.sign));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_fexp(Value &lhs) noexcept {
+    FloatInfo fi;
+    fi.f = lhs.number.f;
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)(fi.parts.exponent));
+    case TYPE_INT:   return Value((Int)(fi.parts.exponent));
+    case TYPE_UINT:  return Value((Uint)(fi.parts.exponent));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_fmant(Value &lhs) noexcept {
+    FloatInfo fi;
+    fi.f = lhs.number.f;
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)(fi.parts.mantissa));
+    case TYPE_INT:   return Value((Int)(fi.parts.mantissa));
+    case TYPE_UINT:  return Value((Uint)(fi.parts.mantissa));
     default: break;
     }
     return lhs.unexpected_type();

@@ -84,6 +84,10 @@
 #define REG_OP_ORD "ord"
 #define REG_OP_LN "ln"
 #define REG_OP_LOG "log"
+#define REG_OP_INFO "info"
+#define REG_OP_FSGN "fsgn"
+#define REG_OP_FEXP "fexp"
+#define REG_OP_FMANT "fmantissa"
 
 struct RpnVtable {
     void *(* create)() noexcept;

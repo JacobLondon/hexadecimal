@@ -53,6 +53,10 @@ static Token tok_INV                TK(370, REG_OP_INV, TOKEN_UNOP);
 static Token tok_ORD                TK(370, REG_OP_ORD, TOKEN_UNOP);
 static Token tok_LN                 TK(370, REG_OP_LN, TOKEN_UNOP);
 static Token tok_LOG                TK(370, REG_OP_LOG, TOKEN_UNOP);
+static Token tok_INFO               TK(370, REG_OP_INFO, TOKEN_UNOP);
+static Token tok_FSGN               TK(370, REG_OP_FSGN, TOKEN_UNOP);
+static Token tok_FEXP               TK(370, REG_OP_FEXP, TOKEN_UNOP);
+static Token tok_FMANT              TK(370, REG_OP_FMANT, TOKEN_UNOP);
 // conversion
 static Token tok_CAST               TK(350, REG_OP_CAST, TOKEN_BINOP);
 static Token tok_AS                 TK(350, REG_OP_AS, TOKEN_BINOP);
@@ -158,6 +162,10 @@ static Token *tokenTable[] = {
     &tok_ORD,
     &tok_LN,
     &tok_LOG,
+    &tok_INFO,
+    &tok_FSGN,
+    &tok_FEXP,
+    &tok_FMANT,
 
     &tok_GT_SYM,
     &tok_GT,
