@@ -50,6 +50,17 @@ $ hd --rpn a ord A ord sub
 # RPN-only first argument can be negative
 $ hd -r -1
 0xFFFFFFFFFFFFFFFF
+
+$ ./hd -r -1.0 fexp
+1023
+
+$ ./hd --32 -r -1.0 fexp
+127
+
+$ ./hd -r nan info
+0, 2047, 2251799813685248
+0, 0x7FF, 0x8000000000000
+nan
 ```
 
 Constants `pi e nan inf` are supported
@@ -67,3 +78,4 @@ hd nan hex as
 * Eliminate undefined or unexpected behavior in rpn program
 * Pivot point can't find negative numbers. Only works with `--rpn`
 * `./hd -v 0 -1 abs` should work, but it also thinks this is a binary op error. Only works with `--rpn`
+* `$ ./hd -r nan fexp hex as` gives `0x409FFC0000000000` for some reason?
