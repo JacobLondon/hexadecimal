@@ -51,8 +51,8 @@ static struct {
     XENTRY(NULL, "--table", func_table, "Get the ASCII table and exit"),
     XENTRY(NULL, "--extable", func_extable, "Get the ASCII table and its extended set and exit"),
     XENTRY("-v", "--verbose", func_verbose, "Display errors"),
-    XENTRY("-r", "--rpn", func_rpn, "Parse the arguments in Reverse Polish Notation (RPN)"),
-    XENTRY("-t", "--tok", func_tok, "Explicitly through tokenization (default)"),
+    XENTRY("-r", "--rpn", func_rpn, "Parse the arguments in Reverse Polish Notation (RPN), default"),
+    XENTRY("-t", "--tok", func_tok, "Explicitly through tokenization"),
     XENTRY(NULL, NULL, NULL, NULL)
 };
 #undef XENTRY
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
         }
     }
 
-    func_tok(argc - pivot, &argv[pivot]);
+    func_rpn(argc - pivot, &argv[pivot]);
 
     return 0;
 }

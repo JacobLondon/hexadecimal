@@ -40,24 +40,27 @@ $ hd 10 sep 50 end 100
 $ hd --ord a
 97
 
+$ hd a ord
+97
+
 $ hd --chr 97
 a
 
 # RPN-only features calling ord on ASCII:
-$ hd --rpn a ord A ord sub
+$ hd a ord A ord sub
 32
 
 # RPN-only first argument can be negative
-$ hd -r -1
+$ hd -1
 0xFFFFFFFFFFFFFFFF
 
-$ ./hd -r -1.0 fexp
+$ ./hd -1.0 fexp
 1023
 
-$ ./hd --32 -r -1.0 fexp
+$ ./hd --32 -1.0 fexp
 127
 
-$ ./hd -r nan info
+$ ./hd nan info
 0, 2047, 2251799813685248
 0, 0x7FF, 0x8000000000000
 nan

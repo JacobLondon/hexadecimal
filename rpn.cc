@@ -1162,9 +1162,10 @@ static Value unop_info(Value &lhs) noexcept {
     case TYPE_FLOAT: {
         FloatInfo fi;
         fi.f = lhs.number.f;
-        fprintf(stdout, FMT_UINT ", " FMT_UINT ", " FMT_UINT "\n",
+        // Note the sizing of these parts is weird. This works:
+        fprintf(stdout, "%u, %u, " FMT_UINT "\n",
             fi.parts.sign, fi.parts.exponent, fi.parts.mantissa);
-        fprintf(stdout, FMT_HEX ", 0x" FMT_HEX ", 0x" FMT_HEX "\n",
+        fprintf(stdout, "%d, 0x%X, 0x" FMT_HEX "\n",
             fi.parts.sign, fi.parts.exponent, fi.parts.mantissa);
         fflush(stdout);
         return lhs;
