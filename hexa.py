@@ -76,6 +76,10 @@ number: BINARY
 // decreasing precedence
 !unary_func: "sqrt" | "sin" | "cos" | "tan"
          | "abs" | "sgn" | "floor" | "round"
+         | "info"
+         | "fsgn"
+         | "fexp"
+         | "fmantissa"
 !unary_op: "~"   -> inv
          | "inv" -> inv
          | "!"   -> not
