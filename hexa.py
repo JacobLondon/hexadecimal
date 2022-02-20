@@ -6,6 +6,108 @@ import sys
 import numpy
 import lark
 
+grammar = r"""\
+
+BINARY: /0[bB][01]+/
+OCTAL: /0[oO][01234567]+/
+HEXADECIMAL: /0[xX][0123456789abcdefABCDEF]+/
+FLOAT: /[+-]?((0?\.[0123456789]+)|((0\.)|([123456789][0123456789]*\.[0123456789]*)))/
+UNSIGNED: /0|([123456789][0123456789]*)/
+SIGNED: /[+-](0|([123456789][0123456789]*))/
+CONSTANT: /pi|e|inf|nan/
+TYPE: /int|uint|float|string/
+FORMAT: /dec|hex|oct|bin|big|little/
+
+number: BINARY
+    | OCTAL
+    | HEXADECIMAL
+    | CONSTANT
+    | FLOAT
+    | UNSIGNED
+    | SIGNED
+    | CONSTANT
+    | TYPE
+    | FORMAT
+
+// decreasing precedence
+!binary_func: "gcd" | "lcm"
+!binary_conv: "cast" | "as"
+!binary_pow: "**"  -> pow
+           | "pow" -> pow
+!binary_mul: "*"   -> mul
+           | "mul" -> mul
+           | "/"   -> div
+           | "div" -> div
+           | "%"   -> mod
+           | "mod" -> mod
+           | "<<"  -> shl
+           | "shl" -> shl
+           | ">>"  -> shr
+           | "shr" -> shr
+           | "&~"  -> bitandinv
+           | "bitandinv" -> bitandinv
+           | "&"   -> bitand
+           | "bitand" -> bitand
+!binary_add: "+"   -> add
+           | "add" -> add
+           | "-"   -> sub
+           | "sub" -> sub
+           | "^"   -> xor
+           | "xor" -> xor
+           | "|"   -> bitor
+           | "bitor" -> bitor
+!binary_equ: "=="  -> eq
+           | "eq"  -> eq
+           | "!="  -> neq
+           | "neq" -> neq
+           | ">"   -> gt
+           | "gt"  -> gt
+           | "<"   -> lt
+           | "lt"  -> lt
+           | ">="  -> gte
+           | "gte" -> gte
+           | "<="  -> lte
+           | "lte" -> lte
+!binary_and: "&&"  -> and
+           | "and" -> and
+!binary_or:  "||"  -> or
+           | "or"  -> or
+
+// decreasing precedence
+!unary_func: "sqrt" | "sin" | "cos" | "tan"
+         | "abs" | "sgn" | "floor" | "round"
+!unary_op: "~"   -> inv
+         | "inv" -> inv
+         | "!"   -> not
+         | "not" -> not
+!seperator: ","  -> sep
+         | "sep" -> sep
+         | ";"   -> end
+         | "end" -> end
+
+// increasing precedence
+value: value binary_or value
+    | value binary_and value
+    | value binary_equ value
+    | value binary_add value
+    | value binary_mul value
+    | value binary_pow value
+    | value binary_conv value
+    | value binary_func value
+    | unary_op value
+    | unary_func value
+    | number
+    | "(" value ")"
+
+program: value
+    | [value (seperator value)*]
+
+%import common.ESCAPED_STRING
+%import common.WS
+%ignore WS
+
+"""
+
 def sep(top):
     print(top, ' ', sep='', end='')
 
@@ -13,11 +115,10 @@ def end(top):
     print(top, sep='')
 
 # parser
-text = None
-with open("grammar.lark", "r") as fp:
-    text = fp.read()
-
-parser = lark.Lark(text, start='program')
+#text = None
+#with open("grammar.lark", "r") as fp:
+#    text = fp.read()
+parser = lark.Lark(grammar, start='program')
 
 # definitions
 
@@ -159,15 +260,34 @@ class Converter:
 # TODO: Do operations and type conversion/correction for int only ops...
 
 def main():
-    text = " ".join(sys.argv[1:])
+    # quote output
+    qflag = False
+
+    if len(sys.argv) <= 1:
+        return 1
+
+    pivot = 1
+    for i, arg in enumerate(sys.argv[pivot:]):
+        ndx = i + 1
+        if arg in ("-q", "--quote"):
+            qflag = True
+            if ndx >= pivot:
+                pivot = ndx + 1
+
+    text = " ".join(sys.argv[pivot:])
     stack = []
 
     hd = Hexadecimal(text, stack.append)
     hd.parse()
 
+    if qflag: print(end="\"")
     # lark.lexer.Token.value
     for token in stack:
         print(token.value, end=' ')
+    if qflag:
+        print(end="\"\n")
+    else:
+        print()
     return 0
 
 if __name__ == '__main__':

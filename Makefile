@@ -33,6 +33,10 @@ clean:
 
 install: $(TARGET)
 	cp -f $(TARGET) $(MYPREFIX)/bin/
+	cp -f hexa.py $(MYPREFIX)/bin/
+	cp -f hexadecimal $(MYPREFIX)/bin/
 
 uninstall:
 	rm -f $(MYPREFIX)/bin/$(TARGET)
+	rm -f $(MYPREFIX)/bin/hexa.py
+	rm -f $(MYPREFIX)/bin/hexadecimal

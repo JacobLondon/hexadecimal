@@ -4,25 +4,34 @@ import sys
 import os
 
 def main():
+    if os.system('which hd >/dev/null 2>&1') == 0:
+        hd = 'hd'
+        hdpy = 'hexa.py'
+    else:
+        hd = './hd'
+        hdpy = "./hexa.py"
+
     program = []
-    options = ['./hd']
+    options = [hd]
     pivot = 1
 
     for i, arg in enumerate(sys.argv[pivot:]):
+        ndx = i + 1
         if arg in ("-h", "--help"):
             return os.system("./hd --help")
         elif arg in (
                 '--32', '--64', '--chr', '--ord',
                 '--table', '--extable', '-v', '--verbose'):
             options.append(arg)
-            if i > pivot:
-                pivot = i + 1
+            if ndx > pivot:
+                pivot = ndx + 1
         else:
             program.append(arg)
 
     program = " ".join(program)
     options = " ".join(options)
-    text = f"./hd.py {program} | xargs {options}"
+    text = f"{hdpy} --quote '{program}' | xargs echo | xargs {options}"
+    #print("running", text)
     return os.system(text)
 
 if __name__ == '__main__':
