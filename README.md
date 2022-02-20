@@ -1,6 +1,16 @@
 # HD - HexaDecimal
 Run `sudo make install` or `sudo make uninstall`. Run `hd --help` to see options. Note most operators have a symbol version which is also usable, but not shown below to avoid needing to escape `;` for example, in the terminal. Calculations are currently in RPN (Reverse Polish Notation). Numbers are represented in 64 bits unless explicitly told to use 32 bits.
 
+## Building
+```bash
+# installation
+make
+sudo make install
+
+# uninstallation
+sudo make uninstall
+```
+
 ## New Usage
 ```bash
 $ hexadecimal 10
