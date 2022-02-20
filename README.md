@@ -89,6 +89,11 @@ $ hd --ord 'a'
 97
 ```
 
+## Programs
+* `hd` a Reverse Polish Notation calculator
+* `hexa.py` an Infix to Postfix converter
+* `hexadecimal` combines `hexa.py` and `hd` into a single program
+
 ## TODO
 * Allow underscores to make it easier to enter and display
 * Make 'ord' and 'chr' an operation
