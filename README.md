@@ -47,13 +47,13 @@ $ hexadecimal '10.0 as int; 10.0 as hex'
 4621819117588971520
 0x4024000000000000
 
-# inspec floating point info
+# inspect floating point info
 $ hexadecimal 'info 10.0'
 0, 1026, 1125899906842624
 0, 0x402, 0x4000000000000
 10
 
-# Constants `pi e nan inf` are supported
+# Constants 'pi e nan inf' are supported
 $ hexadecimal 'pi, e, nan, inf'
 3.14159 2.71828 nan inf
 
