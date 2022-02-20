@@ -1,6 +1,11 @@
 # HD - HexaDecimal
 Run `hexadecimal --help` to see options. Note most operators have a symbol version which is also usable to avoid needing to escape `;` for example, in the terminal.
 
+Note `requirements.txt` must be installed to use the `hexadecimal` tool. The `hd` tool alone doesn't require these dependencies however:
+```bash
+cat requirements.txt | xargs python3 -m pip install
+```
+
 ## Building
 ```bash
 # installation
