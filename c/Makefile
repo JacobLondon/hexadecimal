@@ -6,7 +6,8 @@ CFLAGS = -Wall -Wextra -lm
 
 TRASH = *.o *.a *.so *.exe
 
-LIB_O = convert.o main.o
+LIB_O = convert.o
+LIB_C = convert.c
 
 TEST_T = test
 
@@ -23,8 +24,8 @@ debug: $(TARGETS)
 clean:
 	$(RM_F) $(TRASH)
 
-$(TEST_T): $(LIB_O)
-	$(CC) -o $@ $^ $(CFLAGS)
+$(TEST_T): $(LIB_C)
+	$(CC) -o $@ $^ -DCONVERT_TEST $(CFLAGS)
 
 check: $(TEST_T)
 	./test

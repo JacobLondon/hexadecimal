@@ -7,6 +7,14 @@
 
 #include "convert.h"
 
+#define CONVERT_DEBUG
+
+#if defined(CONVERT_DEBUG)
+#  define DEBUG(...) (void)fprintf(stderr, __VA_ARGS__)
+#else
+#  define DEBUG(...)
+#endif
+
 /* always seperate the magnitudes with this */
 #define SEP_MAGNITUDE_ALWAYS '_'
 
@@ -41,28 +49,35 @@ ConvertResult ConvertString(const char *string)
     }
 
     if (ConvertRemoveMagnitudes(string, temp, sizeof(temp)) != 0) goto error;
-    printf("Converting %s...\n", temp);
+    DEBUG("Converting %s...\n", temp);
 
     if (ConvertToHex(temp, &result.uinteger) == 0) {
+        DEBUG("Chosen hex\n");
         result.type = CONVERT_RESULT_HEX;
     }
     else if (ConvertToOct(temp, &result.uinteger) == 0) {
+        DEBUG("Chosen oct\n");
         result.type = CONVERT_RESULT_OCT;
     }
     else if (ConvertToBin(temp, &result.uinteger) == 0) {
+        DEBUG("Chosen bin\n");
         result.type = CONVERT_RESULT_BIN;
     }
     else if (ConvertToDecSigned(temp, &result.integer) == 0) {
+        DEBUG("Chosen signed dec\n");
         result.type = CONVERT_RESULT_INT;
     }
     else if (ConvertToDecUnsigned(temp, &result.uinteger) == 0) {
+        DEBUG("Chosen unsigned dec\n");
         result.type = CONVERT_RESULT_UINT;
     }
     else if (ConvertToFloat(temp, &result.real) == 0) {
         result.type = CONVERT_RESULT_FLOAT;
+        DEBUG("Chosen float\n");
     }
     else {
     error:
+        DEBUG("Error\n");
         result.type = CONVERT_RESULT_CANT_CONVERT;
         result.integer = 0;
     }
@@ -108,7 +123,7 @@ static int dump_bin(FILE *stream, unsigned long long value)
     if (!stream) return 0;
 
     bytes = fprintf(stream, "0b");
-    for (i = (int)sizeof(value) * 8; i >= 0; i--) {
+    for (i = (int)(sizeof(value) * 8) - 1; i >= 0; i--) {
         tmp = !!(value & (1ull << i));
         if (tmp) {
             bytes += fprintf(stream, "%c", '0' + tmp);
@@ -169,7 +184,7 @@ static int is_prefixed(const char *string, int first, int second_lower, int seco
     if ((string[0] == first) &&
         ((string[1] == second_lower) || (string[1] == second_upper)))
     {
-        return isdigit(string[2]);
+        return 0;
     }
 
     return 1;
@@ -192,10 +207,11 @@ static int convert_oct(const char *string, unsigned long long *out)
 static int convert_bin(const char *string, unsigned long long *out)
 {
     const char *p;
-    size_t i;
-    unsigned long long builder = 0;
+    long long i;
+    unsigned long long builder;
 
     if (!string || !out) return 1;
+    builder = 0;
     i = strlen(string) - 1;
 
     for (p = string; *p != 0; p++, i--) {
@@ -222,11 +238,13 @@ static int convert_value(
     int rv;
 
     if (!string || !correct_size_out || !convert) return 1;
+    if (string[0] == '\0') return 1;
 
     rv = is_prefixed(string, first, second_lower, second_upper);
     if (rv != 0) return 1;
 
     if (correct_size_out) {
+        if ((string[1] == '\0') || (string[2] == '\0')) return 1;
         string += 2; /* bypass 0x,0o,0b */
         if (convert(string, correct_size_out) != 0) return 1;
     }
@@ -293,7 +311,7 @@ int ConvertToDecSigned(const char *string, long long *out)
 
     if (out) {
         if (sscanf(string, "%lld", &convert) != 1) return 1;
-        *out = convert;
+        *out = (negative ? -1 : 1) * convert;
     }
     return 0;
 }
@@ -313,3 +331,180 @@ int ConvertToDecUnsigned(const char *string, unsigned long long *out)
     }
     return 0;
 }
+
+#ifndef CONVERT_TEST
+#define CONVERT_TEST
+#endif
+
+#if defined(CONVERT_TEST)
+
+static int test_float(void)
+{
+    ConvertResult result;
+    size_t i;
+    int rv = 0;
+
+    struct {
+        const char *value;
+        double expected;
+        int expected_rv;
+    } cases[] = {
+        {"awe32p9r0awfe,32", 0, 1},
+        {"1", 0, 1},
+        {"0x10", 0, 1},
+        {"0b10", 0, 1},
+        {"0o10", 0, 1},
+
+        {"1.2e3", 1200.0, 0},
+        {"1.2E3", 1200.0, 0},
+        {"1e3", 1000.0, 0},
+        {"1e-3", 0.001, 0},
+        {"-1.e-3", -0.001, 0},
+        {"-1.E3", -1000.0, 0},
+        {".1e3", 100.0, 0},
+        {".1E3", 100.0, 0},
+
+        {"1.2", 1.2, 0},
+        {"-1.2", -1.2, 0},
+        {"-.1", -.1, 0},
+        {".1", .1, 0},
+
+        {0, 0, 0}
+    };
+
+    DEBUG("%s\n", __func__);
+    for (i = 0; cases[i].value != NULL; i++) {
+        result = ConvertString(cases[i].value);
+
+        if ((result.real != cases[i].expected) &&
+           ((result.type >= CONVERT_RESULT_ERROR) && (cases[i].expected_rv == 0)))
+        {
+            rv += 1;
+        }
+    }
+    return rv;
+}
+
+static int test_bin(void)
+{
+    ConvertResult result;
+    size_t i;
+    int rv = 0;
+
+    struct {
+        const char *value;
+        unsigned long long expected;
+        int expected_rv;
+    } cases[] = {
+        {"awe32p9r0awfe,32", 0, 1},
+        {"1", 0, 1},
+        {"0x10", 0, 1},
+        {".1234e3", 0, 1},
+        {"0o10", 0, 1},
+        {"-0b11", 0, 1},
+
+        {"0b01", 1, 0},
+        {"0b11", 3, 0},
+        {"0b0001_0000", 16, 0},
+
+        {0, 0, 0}
+    };
+
+    DEBUG("%s\n", __func__);
+    for (i = 0; cases[i].value != NULL; i++) {
+        result = ConvertString(cases[i].value);
+
+        if ((result.uinteger != cases[i].expected) &&
+           ((result.type >= CONVERT_RESULT_ERROR) && (cases[i].expected_rv == 0)))
+        {
+            rv += 1;
+        }
+    }
+    return rv;
+
+    return 0;
+}
+
+static int test_oct(void)
+{
+    ConvertResult result;
+    size_t i;
+    int rv = 0;
+
+    struct {
+        const char *value;
+        unsigned long long expected;
+        int expected_rv;
+    } cases[] = {
+        {"awe32p9r0awfe,32", 0, 1},
+        {"1", 0, 1},
+        {".1234e3", 0, 1},
+        {"0o10", 0, 1},
+        {"-0b11", 0, 1},
+
+        {"0x01", 0x01, 0},
+        {"0x11", 0x11, 0},
+        {"0x000F_0000", 0x000F0000, 0},
+
+        {0, 0, 0}
+    };
+
+    DEBUG("%s\n", __func__);
+    for (i = 0; cases[i].value != NULL; i++) {
+        result = ConvertString(cases[i].value);
+
+        if ((result.uinteger != cases[i].expected) &&
+           ((result.type >= CONVERT_RESULT_ERROR) && (cases[i].expected_rv == 0)))
+        {
+            rv += 1;
+        }
+    }
+    return rv;
+}
+
+static int test_hex(void)
+{
+
+
+    return 0;
+}
+
+static int test_int(void)
+{
+
+
+    return 0;
+}
+
+static int test_uint(void)
+{
+
+
+    return 0;
+}
+
+int main(int argc, char **argv)
+{
+    int rv = 0;
+
+    if (argc == 2) {
+        ConvertResult result = ConvertString(argv[1]);
+        if (result.type >= CONVERT_RESULT_ERROR) {
+            printf("Failed to convert: %s: ", argv[1]);
+            return 1;
+        }
+        ConvertResultDump(&result, stdout);
+        printf("\n");
+        return 0;
+    }
+
+    rv += test_float();
+    rv += test_bin();
+    rv += test_oct();
+    rv += test_hex();
+    rv += test_int();
+    rv += test_uint();
+
+    return rv;
+}
+#endif
