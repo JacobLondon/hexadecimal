@@ -26,6 +26,7 @@ typedef struct {
 
 ConvertResult ConvertString(const char *string);
 int ConvertResultDump(ConvertResult *result, FILE *stream); /* return bytes written */
+int ConvertResultDumpLong(ConvertResult *result, FILE *stream); /* return bytes written */
 
 void ConvertSetMagnitudeChar(int sep); /* default is ',' */
 void ConvertSetDecimalChar(int dec); /* default is '.' */

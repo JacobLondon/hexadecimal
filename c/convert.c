@@ -85,68 +85,102 @@ ConvertResult ConvertString(const char *string)
     return result;
 }
 
-static int dump_int(FILE *stream, long long value)
+static int dump_int(FILE *stream, long long value, int longform)
 {
+    (void)longform;
     if (!stream) return 0;
     return fprintf(stream, "%+lld", value);
 }
 
-static int dump_uint(FILE *stream, unsigned long long value)
+static int dump_uint(FILE *stream, unsigned long long value, int longform)
 {
+    (void)longform;
     if (!stream) return 0;
     return fprintf(stream, "%llu", value);
 }
 
-static int dump_hex(FILE *stream, unsigned long long value)
+static int dump_hex(FILE *stream, unsigned long long value, int longform)
 {
+    (void)longform;
     if (!stream) return 0;
     return fprintf(stream, "0x%llX", value);
 }
 
-static int dump_oct(FILE *stream, unsigned long long value)
+static int dump_oct(FILE *stream, unsigned long long value, int longform)
 {
+    (void)longform;
     if (!stream) return 0;
     return fprintf(stream, "0o%llo", value);
 }
 
-static int dump_float(FILE *stream, double value)
+static int dump_float(FILE *stream, double value, int longform)
 {
+    (void)longform;
     if (!stream) return 0;
     return fprintf(stream, "%lf", value);
 }
 
-static int dump_bin(FILE *stream, unsigned long long value)
+static int dump_bin(FILE *stream, unsigned long long value, int longform)
 {
     int i;
-    int bytes;
     int tmp;
+    char buf[(sizeof(value) * 8) + 2 + 1] = "0b";
+    char *p = &buf[2];
+
     if (!stream) return 0;
 
-    bytes = fprintf(stream, "0b");
     for (i = (int)(sizeof(value) * 8) - 1; i >= 0; i--) {
         tmp = !!(value & (1ull << i));
-        if (tmp) {
-            bytes += fprintf(stream, "%c", '0' + tmp);
+        p[(sizeof(value) * 8 - 1) - i] = '0' + tmp;
+    }
+
+    if (!longform) {
+        p = strchr(p, '1');
+        /* at least a one */
+        if (p) {
+            p[-2] = '0';
+            p[-1] = 'b';
+            p = &p[-2];
+        }
+        /* all zero, 0b0 */
+        else {
+            buf[2] = '0';
+            buf[3] = '\0';
+            p = buf;
         }
     }
-    return bytes;
+    else {
+        p = buf;
+    }
+
+    return fprintf(stream, "%s", p);
 }
 
-int ConvertResultDump(ConvertResult *result, FILE *stream)
+static int dump_result(ConvertResult *result, FILE *stream, int longform)
 {
     if (!result || !stream) return 0;
 
     switch (result->type)
     {
-    case CONVERT_RESULT_INT:   return dump_int(stream, result->integer);
-    case CONVERT_RESULT_UINT:  return dump_uint(stream, result->uinteger);
-    case CONVERT_RESULT_HEX:   return dump_hex(stream, result->uinteger);
-    case CONVERT_RESULT_OCT:   return dump_oct(stream, result->uinteger);
-    case CONVERT_RESULT_FLOAT: return dump_float(stream, result->real);
-    case CONVERT_RESULT_BIN:   return dump_bin(stream, result->uinteger);
+    case CONVERT_RESULT_INT:   return dump_int(stream, result->integer, longform);
+    case CONVERT_RESULT_UINT:  return dump_uint(stream, result->uinteger, longform);
+    case CONVERT_RESULT_HEX:   return dump_hex(stream, result->uinteger, longform);
+    case CONVERT_RESULT_OCT:   return dump_oct(stream, result->uinteger, longform);
+    case CONVERT_RESULT_FLOAT: return dump_float(stream, result->real, longform);
+    case CONVERT_RESULT_BIN:   return dump_bin(stream, result->uinteger, longform);
     default:
         return 0;
     }
+}
+
+int ConvertResultDump(ConvertResult *result, FILE *stream)
+{
+    return dump_result(result, stream, 0);
+}
+
+int ConvertResultDumpLong(ConvertResult *result, FILE *stream)
+{
+    return dump_result(result, stream, 1);
 }
 
 void ConvertSetMagnitudeChar(int sep)
