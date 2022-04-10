@@ -1,9 +1,9 @@
 #include <assert.h>
 #include <ctype.h>
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "convert.h"
 
@@ -19,7 +19,58 @@
 #define SEP_MAGNITUDE_ALWAYS '_'
 
 static int sep_magnitude = ',';
-static int sep_decimal = '.';
+static int sep_decimal = '.'; /* TODO */
+
+int ConvertAsciiToOrd(char *string)
+{
+    if (!string) return -1;
+    return (int)string[0];
+}
+
+int ConvertOrdToAscii(char *number)
+{
+    int ord;
+
+    ConvertResult32 result = ConvertString32(number);
+    if (result.type >= CONVERT_RESULT_ERROR) return -1;
+    if (result.type == CONVERT_RESULT_INT) {
+        ord = result.integer;
+    }
+    else if (result.type == CONVERT_RESULT_FLOAT) {
+        ord = result.real;
+    }
+    else {
+        ord = result.uinteger;
+    }
+
+    char actual = ord & 0xF;
+    return (int)actual;
+}
+
+static ConvertResult32 downcast(ConvertResult64 in)
+{
+    ConvertResult32 out;
+    out.type = in.type;
+
+    switch (in.type) {
+    case CONVERT_RESULT_INT:
+        out.integer = in.integer;
+        break;
+    case CONVERT_RESULT_UINT: /* fallthrough */
+    case CONVERT_RESULT_HEX: /* fallthrough */
+    case CONVERT_RESULT_OCT: /* fallthrough */
+    case CONVERT_RESULT_BIN:
+        out.uinteger = in.uinteger;
+        break;
+    case CONVERT_RESULT_FLOAT:
+        out.real = in.real;
+        break;
+    default:
+        out.uinteger = 0;
+        break;
+    }
+    return out;
+}
 
 int ConvertRemoveMagnitudes(const char *input, char *output, size_t output_size)
 {
@@ -37,10 +88,10 @@ int ConvertRemoveMagnitudes(const char *input, char *output, size_t output_size)
     return 0;
 }
 
-ConvertResult ConvertString(const char *string)
+ConvertResult64 ConvertString64(const char *string)
 {
     char temp[512];
-    ConvertResult result;
+    ConvertResult64 result;
     memset(&result, 0, sizeof(result));
 
     if (!string) {
@@ -51,27 +102,27 @@ ConvertResult ConvertString(const char *string)
     if (ConvertRemoveMagnitudes(string, temp, sizeof(temp)) != 0) goto error;
     DEBUG("Converting %s...\n", temp);
 
-    if (ConvertToHex(temp, &result.uinteger) == 0) {
+    if (ConvertToHex64(temp, &result.uinteger) == 0) {
         DEBUG("Chosen hex\n");
         result.type = CONVERT_RESULT_HEX;
     }
-    else if (ConvertToOct(temp, &result.uinteger) == 0) {
+    else if (ConvertToOct64(temp, &result.uinteger) == 0) {
         DEBUG("Chosen oct\n");
         result.type = CONVERT_RESULT_OCT;
     }
-    else if (ConvertToBin(temp, &result.uinteger) == 0) {
+    else if (ConvertToBin64(temp, &result.uinteger) == 0) {
         DEBUG("Chosen bin\n");
         result.type = CONVERT_RESULT_BIN;
     }
-    else if (ConvertToDecSigned(temp, &result.integer) == 0) {
+    else if (ConvertToDecSigned64(temp, &result.integer) == 0) {
         DEBUG("Chosen signed dec\n");
         result.type = CONVERT_RESULT_INT;
     }
-    else if (ConvertToDecUnsigned(temp, &result.uinteger) == 0) {
+    else if (ConvertToDecUnsigned64(temp, &result.uinteger) == 0) {
         DEBUG("Chosen unsigned dec\n");
         result.type = CONVERT_RESULT_UINT;
     }
-    else if (ConvertToFloat(temp, &result.real) == 0) {
+    else if (ConvertToFloat64(temp, &result.real) == 0) {
         result.type = CONVERT_RESULT_FLOAT;
         DEBUG("Chosen float\n");
     }
@@ -85,42 +136,82 @@ ConvertResult ConvertString(const char *string)
     return result;
 }
 
-static int dump_int(FILE *stream, long long value, int longform)
+ConvertResult32 ConvertString32(const char *string)
+{
+    return downcast(ConvertString64(string));
+}
+
+static int dump_int64(FILE *stream, int64_t value, int longform)
 {
     (void)longform;
     if (!stream) return 0;
-    return fprintf(stream, "%+lld", value);
+    return fprintf(stream, "%+"PRId64, value);
 }
 
-static int dump_uint(FILE *stream, unsigned long long value, int longform)
+static int dump_int32(FILE *stream, int32_t value, int longform)
 {
     (void)longform;
     if (!stream) return 0;
-    return fprintf(stream, "%llu", value);
+    return fprintf(stream, "%+"PRId32, value);
 }
 
-static int dump_hex(FILE *stream, unsigned long long value, int longform)
+static int dump_uint64(FILE *stream, uint64_t value, int longform)
 {
     (void)longform;
     if (!stream) return 0;
-    return fprintf(stream, "0x%llX", value);
+    return fprintf(stream, "%"PRIu64, value);
 }
 
-static int dump_oct(FILE *stream, unsigned long long value, int longform)
+static int dump_uint32(FILE *stream, uint32_t value, int longform)
 {
     (void)longform;
     if (!stream) return 0;
-    return fprintf(stream, "0o%llo", value);
+    return fprintf(stream, "%"PRIu32, value);
 }
 
-static int dump_float(FILE *stream, double value, int longform)
+static int dump_hex64(FILE *stream, uint64_t value, int longform)
+{
+    (void)longform;
+    if (!stream) return 0;
+    return fprintf(stream, "0x%"PRIx64, value);
+}
+
+static int dump_hex32(FILE *stream, uint32_t value, int longform)
+{
+    (void)longform;
+    if (!stream) return 0;
+    return fprintf(stream, "0x%"PRIx32, value);
+}
+
+static int dump_oct64(FILE *stream, uint64_t value, int longform)
+{
+    (void)longform;
+    if (!stream) return 0;
+    return fprintf(stream, "0o%"PRIo64, value);
+}
+
+static int dump_oct32(FILE *stream, uint32_t value, int longform)
+{
+    (void)longform;
+    if (!stream) return 0;
+    return fprintf(stream, "0o%"PRIo32, value);
+}
+
+static int dump_float64(FILE *stream, double value, int longform)
 {
     (void)longform;
     if (!stream) return 0;
     return fprintf(stream, "%lf", value);
 }
 
-static int dump_bin(FILE *stream, unsigned long long value, int longform)
+static int dump_float32(FILE *stream, float value, int longform)
+{
+    (void)longform;
+    if (!stream) return 0;
+    return fprintf(stream, "%f", value);
+}
+
+static int dump_bin64(FILE *stream, uint64_t value, int longform)
 {
     int i;
     int tmp;
@@ -156,31 +247,94 @@ static int dump_bin(FILE *stream, unsigned long long value, int longform)
     return fprintf(stream, "%s", p);
 }
 
-static int dump_result(ConvertResult *result, FILE *stream, int longform)
+static int dump_bin32(FILE *stream, uint32_t value, int longform)
+{
+    int i;
+    int tmp;
+    char buf[(sizeof(value) * 8) + 2 + 1] = "0b";
+    char *p = &buf[2];
+
+    if (!stream) return 0;
+
+    for (i = (int)(sizeof(value) * 8) - 1; i >= 0; i--) {
+        tmp = !!(value & (1ull << i));
+        p[(sizeof(value) * 8 - 1) - i] = '0' + tmp;
+    }
+
+    if (!longform) {
+        p = strchr(p, '1');
+        /* at least a one */
+        if (p) {
+            p[-2] = '0';
+            p[-1] = 'b';
+            p = &p[-2];
+        }
+        /* all zero, 0b0 */
+        else {
+            buf[2] = '0';
+            buf[3] = '\0';
+            p = buf;
+        }
+    }
+    else {
+        p = buf;
+    }
+
+    return fprintf(stream, "%s", p);
+}
+
+static int dump_result64(ConvertResult64 *result, FILE *stream, int longform)
 {
     if (!result || !stream) return 0;
 
     switch (result->type)
     {
-    case CONVERT_RESULT_INT:   return dump_int(stream, result->integer, longform);
-    case CONVERT_RESULT_UINT:  return dump_uint(stream, result->uinteger, longform);
-    case CONVERT_RESULT_HEX:   return dump_hex(stream, result->uinteger, longform);
-    case CONVERT_RESULT_OCT:   return dump_oct(stream, result->uinteger, longform);
-    case CONVERT_RESULT_FLOAT: return dump_float(stream, result->real, longform);
-    case CONVERT_RESULT_BIN:   return dump_bin(stream, result->uinteger, longform);
+    case CONVERT_RESULT_INT:   return dump_int64(stream, result->integer, longform);
+    case CONVERT_RESULT_UINT:  return dump_uint64(stream, result->uinteger, longform);
+    case CONVERT_RESULT_HEX:   return dump_hex64(stream, result->uinteger, longform);
+    case CONVERT_RESULT_OCT:   return dump_oct64(stream, result->uinteger, longform);
+    case CONVERT_RESULT_FLOAT: return dump_float64(stream, result->real, longform);
+    case CONVERT_RESULT_BIN:   return dump_bin64(stream, result->uinteger, longform);
     default:
         return 0;
     }
 }
 
-int ConvertResultDump(ConvertResult *result, FILE *stream)
+static int dump_result32(ConvertResult32 *result, FILE *stream, int longform)
 {
-    return dump_result(result, stream, 0);
+    if (!result || !stream) return 0;
+
+    switch (result->type)
+    {
+    case CONVERT_RESULT_INT:   return dump_int32(stream, result->integer, longform);
+    case CONVERT_RESULT_UINT:  return dump_uint32(stream, result->uinteger, longform);
+    case CONVERT_RESULT_HEX:   return dump_hex32(stream, result->uinteger, longform);
+    case CONVERT_RESULT_OCT:   return dump_oct32(stream, result->uinteger, longform);
+    case CONVERT_RESULT_FLOAT: return dump_float32(stream, result->real, longform);
+    case CONVERT_RESULT_BIN:   return dump_bin32(stream, result->uinteger, longform);
+    default:
+        return 0;
+    }
 }
 
-int ConvertResultDumpLong(ConvertResult *result, FILE *stream)
+int ConvertResultDump64(ConvertResult64 *result, FILE *stream)
 {
-    return dump_result(result, stream, 1);
+    return dump_result64(result, stream, 0);
+}
+
+int ConvertResultDumpLong64(ConvertResult64 *result, FILE *stream)
+{
+    return dump_result64(result, stream, 1);
+}
+
+int ConvertResultDump32(ConvertResult32 *result, FILE *stream)
+{
+    return dump_result32(result, stream, 0);
+}
+
+int ConvertResultDumpLong32(ConvertResult32 *result, FILE *stream)
+{
+    return dump_result32(result, stream, 1);
 }
 
 void ConvertSetMagnitudeChar(int sep)
@@ -193,7 +347,7 @@ void ConvertSetDecimalChar(int dec)
     sep_decimal = dec;
 }
 
-int ConvertToFloat(const char *string, double *out)
+int ConvertToFloat64(const char *string, double *out)
 {
     double convert;
 
@@ -201,6 +355,15 @@ int ConvertToFloat(const char *string, double *out)
     if (sscanf(string, "%lf", &convert) != 1) return 1;
     if (out) *out = convert;
 
+    return 0;
+}
+
+int ConvertToFloat32(const char *string, float *out)
+{
+    double result;
+    int rv = ConvertToFloat64(string, &result);
+    if (rv != 0) return rv;
+    if (out) *out = result;
     return 0;
 }
 
@@ -224,25 +387,25 @@ static int is_prefixed(const char *string, int first, int second_lower, int seco
     return 1;
 }
 
-static int convert_hex(const char *string, unsigned long long *out)
+static int convert_hex(const char *string, uint64_t *out)
 {
     if (!string || !out) return 1;
-    if (sscanf(string, "%llx", out) != 1) return 1;
+    if (sscanf(string, "%"PRIx64, out) != 1) return 1;
     return 0;
 }
 
-static int convert_oct(const char *string, unsigned long long *out)
+static int convert_oct(const char *string, uint64_t *out)
 {
     if (!string || !out) return 1;
-    if (sscanf(string, "%llo", out) != 1) return 1;
+    if (sscanf(string, "%"PRIo64, out) != 1) return 1;
     return 0;
 }
 
-static int convert_bin(const char *string, unsigned long long *out)
+static int convert_bin(const char *string, uint64_t *out)
 {
     const char *p;
-    long long i;
-    unsigned long long builder;
+    int64_t i;
+    uint64_t builder;
 
     if (!string || !out) return 1;
     builder = 0;
@@ -267,7 +430,7 @@ static int convert_bin(const char *string, unsigned long long *out)
 static int convert_value(
     const char *string, void *correct_size_out,
     int first, int second_lower, int second_upper,
-    int (*convert)(const char *, unsigned long long *))
+    int (*convert)(const char *, uint64_t *))
 {
     int rv;
 
@@ -285,9 +448,9 @@ static int convert_value(
     return 0;
 }
 
-int ConvertToHex(const char *string, unsigned long long *out)
+int ConvertToHex64(const char *string, uint64_t *out)
 {
-    unsigned long long convert;
+    uint64_t convert;
     int rv;
 
     rv = convert_value(string, &convert, '0', 'x', 'X', convert_hex);
@@ -296,9 +459,18 @@ int ConvertToHex(const char *string, unsigned long long *out)
     return 0;
 }
 
-int ConvertToOct(const char *string, unsigned long long *out)
+int ConvertToHex32(const char *string, uint32_t *out)
 {
-    unsigned long long convert;
+    uint64_t result;
+    int rv = ConvertToHex64(string, &result);
+    if (rv != 0) return rv;
+    if (out) *out = result;
+    return 0;
+}
+
+int ConvertToOct64(const char *string, uint64_t *out)
+{
+    uint64_t convert;
     int rv;
 
     rv = convert_value(string, &convert, '0', 'o', 'O', convert_oct);
@@ -307,14 +479,32 @@ int ConvertToOct(const char *string, unsigned long long *out)
     return 0;
 }
 
-int ConvertToBin(const char *string, unsigned long long *out)
+int ConvertToOct32(const char *string, uint32_t *out)
 {
-    unsigned long long convert;
+    uint64_t result;
+    int rv = ConvertToOct64(string, &result);
+    if (rv != 0) return rv;
+    if (out) *out = result;
+    return 0;
+}
+
+int ConvertToBin64(const char *string, uint64_t *out)
+{
+    uint64_t convert;
     int rv;
 
     rv = convert_value(string, &convert, '0', 'b', 'B', convert_bin);
     if (rv != 0) return 1;
     if (out) *out = convert;
+    return 0;
+}
+
+int ConvertToBin32(const char *string, uint32_t *out)
+{
+    uint64_t result;
+    int rv = ConvertToBin64(string, &result);
+    if (rv != 0) return rv;
+    if (out) *out = result;
     return 0;
 }
 
@@ -330,11 +520,11 @@ static int is_all_digits(const char *string)
     return 0;
 }
 
-int ConvertToDecSigned(const char *string, long long *out)
+int ConvertToDecSigned64(const char *string, int64_t *out)
 {
     int rv;
     int negative;
-    long long convert;
+    int64_t convert;
 
     if (!string) return 1;
     negative = (string[0] == '-');
@@ -344,27 +534,46 @@ int ConvertToDecSigned(const char *string, long long *out)
     if (rv != 0) return 1;
 
     if (out) {
-        if (sscanf(string, "%lld", &convert) != 1) return 1;
+        if (sscanf(string, "%"PRId64, &convert) != 1) return 1;
         *out = (negative ? -1 : 1) * convert;
     }
     return 0;
 }
 
-int ConvertToDecUnsigned(const char *string, unsigned long long *out)
+int ConvertToDecSigned32(const char *string, int32_t *out)
+{
+    int64_t result;
+    int rv = ConvertToDecSigned64(string, &result);
+    if (rv != 0) return rv;
+    if (out) *out = result;
+    return 0;
+}
+
+int ConvertToDecUnsigned64(const char *string, uint64_t *out)
 {
     int rv;
-    unsigned long long convert;
+    uint64_t convert;
 
     if (!string) return 1;
     rv = is_all_digits(string);
     if (rv != 0) return 1;
 
     if (out) {
-        if (sscanf(string, "%llu", &convert) != 1) return 1;
+        if (sscanf(string, "%"PRIu64, &convert) != 1) return 1;
         *out = convert;
     }
     return 0;
 }
+
+int ConvertToDecUnsigned32(const char *string, uint32_t *out)
+{
+    uint64_t result;
+    int rv = ConvertToDecUnsigned64(string, &result);
+    if (rv != 0) return rv;
+    if (out) *out = result;
+    return 0;
+}
+
 
 #ifndef CONVERT_TEST
 #define CONVERT_TEST
@@ -374,7 +583,7 @@ int ConvertToDecUnsigned(const char *string, unsigned long long *out)
 
 static int test_float(void)
 {
-    ConvertResult result;
+    ConvertResult64 result;
     size_t i;
     int rv = 0;
 
@@ -408,7 +617,7 @@ static int test_float(void)
 
     DEBUG("%s\n", __func__);
     for (i = 0; cases[i].value != NULL; i++) {
-        result = ConvertString(cases[i].value);
+        result = ConvertString64(cases[i].value);
 
         if ((result.real != cases[i].expected) &&
            ((result.type >= CONVERT_RESULT_ERROR) && (cases[i].expected_rv == 0)))
@@ -421,13 +630,13 @@ static int test_float(void)
 
 static int test_bin(void)
 {
-    ConvertResult result;
+    ConvertResult64 result;
     size_t i;
     int rv = 0;
 
     struct {
         const char *value;
-        unsigned long long expected;
+        uint64_t expected;
         int expected_rv;
     } cases[] = {
         {"awe32p9r0awfe,32", 0, 1},
@@ -446,7 +655,7 @@ static int test_bin(void)
 
     DEBUG("%s\n", __func__);
     for (i = 0; cases[i].value != NULL; i++) {
-        result = ConvertString(cases[i].value);
+        result = ConvertString64(cases[i].value);
 
         if ((result.uinteger != cases[i].expected) &&
            ((result.type >= CONVERT_RESULT_ERROR) && (cases[i].expected_rv == 0)))
@@ -461,13 +670,50 @@ static int test_bin(void)
 
 static int test_oct(void)
 {
-    ConvertResult result;
+    ConvertResult64 result;
     size_t i;
     int rv = 0;
 
     struct {
         const char *value;
-        unsigned long long expected;
+        uint64_t expected;
+        int expected_rv;
+    } cases[] = {
+        {"awe32p9r0awfe,32", 0, 1},
+        {"1", 0, 1},
+        {".1234e3", 0, 1},
+        {"0o10", 1, 0},
+        {"-0b11", 0, 1},
+
+        {"0x01", 0x01, 1},
+        {"0x11", 0x11, 1},
+        {"0x000F_0000", 0x000F0000, 1},
+
+        {0, 0, 0}
+    };
+
+    DEBUG("%s\n", __func__);
+    for (i = 0; cases[i].value != NULL; i++) {
+        result = ConvertString64(cases[i].value);
+
+        if ((result.uinteger != cases[i].expected) &&
+           ((result.type >= CONVERT_RESULT_ERROR) && (cases[i].expected_rv == 0)))
+        {
+            rv += 1;
+        }
+    }
+    return rv;
+}
+
+static int test_hex(void)
+{
+    ConvertResult64 result;
+    size_t i;
+    int rv = 0;
+
+    struct {
+        const char *value;
+        uint64_t expected;
         int expected_rv;
     } cases[] = {
         {"awe32p9r0awfe,32", 0, 1},
@@ -485,7 +731,7 @@ static int test_oct(void)
 
     DEBUG("%s\n", __func__);
     for (i = 0; cases[i].value != NULL; i++) {
-        result = ConvertString(cases[i].value);
+        result = ConvertString64(cases[i].value);
 
         if ((result.uinteger != cases[i].expected) &&
            ((result.type >= CONVERT_RESULT_ERROR) && (cases[i].expected_rv == 0)))
@@ -494,11 +740,6 @@ static int test_oct(void)
         }
     }
     return rv;
-}
-
-static int test_hex(void)
-{
-
 
     return 0;
 }
@@ -522,12 +763,12 @@ int main(int argc, char **argv)
     int rv = 0;
 
     if (argc == 2) {
-        ConvertResult result = ConvertString(argv[1]);
+        ConvertResult64 result = ConvertString64(argv[1]);
         if (result.type >= CONVERT_RESULT_ERROR) {
             printf("Failed to convert: %s: ", argv[1]);
             return 1;
         }
-        ConvertResultDump(&result, stdout);
+        ConvertResultDump64(&result, stdout);
         printf("\n");
         return 0;
     }

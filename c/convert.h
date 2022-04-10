@@ -2,44 +2,74 @@
 #define CONVERT_H_
 
 #include <stdio.h>
+#include <stdint.h>
+
+enum _convert_result_enum_ {
+    CONVERT_RESULT_INT,
+    CONVERT_RESULT_UINT,
+    CONVERT_RESULT_HEX,
+    CONVERT_RESULT_OCT,
+    CONVERT_RESULT_BIN,
+    CONVERT_RESULT_FLOAT,
+    /* boundary */
+    CONVERT_RESULT_ERROR,
+    CONVERT_RESULT_NULL_STRING,
+    CONVERT_RESULT_CANT_CONVERT,
+};
+
+union _convert_result_value32_ {
+    int32_t integer;
+    uint32_t uinteger;
+    float real;
+};
 
 typedef struct {
-    enum {
-        CONVERT_RESULT_INT,
-        CONVERT_RESULT_UINT,
-        CONVERT_RESULT_HEX,
-        CONVERT_RESULT_OCT,
-        CONVERT_RESULT_BIN,
-        CONVERT_RESULT_FLOAT,
-
-        CONVERT_RESULT_ERROR, /* boundary */
-
-        CONVERT_RESULT_NULL_STRING,
-        CONVERT_RESULT_CANT_CONVERT,
-    } type;
+    enum _convert_result_enum_ type;
     union {
-        unsigned long long uinteger;
-        long long integer;
+        int64_t integer;
+        uint64_t uinteger;
         double real;
     };
-} ConvertResult;
+} ConvertResult64;
 
-ConvertResult ConvertString(const char *string);
-int ConvertResultDump(ConvertResult *result, FILE *stream); /* return bytes written */
-int ConvertResultDumpLong(ConvertResult *result, FILE *stream); /* return bytes written */
+typedef struct {
+    enum _convert_result_enum_ type;
+    union {
+        int32_t integer;
+        uint32_t uinteger;
+        float real;
+    };
+} ConvertResult32;
+
+int ConvertAsciiToOrd(char *string);
+int ConvertOrdToAscii(char *number);
 
 void ConvertSetMagnitudeChar(int sep); /* default is ',' */
 void ConvertSetDecimalChar(int dec); /* default is '.' */
-
 int ConvertRemoveMagnitudes(const char *input, char *output, size_t output_size);
 
-/* the following will fail with magnitude chars, they shouldbe trimmed first */
+#define CONVERT_DEFINE_PROTOTYPES_MAIN(BITS)                                  \
+    ConvertResult##BITS ConvertString##BITS(const char *string);              \
+    /* return bytes written */                                                \
+    int ConvertResultDump##BITS(ConvertResult##BITS *result, FILE *stream);   \
+    int ConvertResultDumpLong##BITS(ConvertResult##BITS *result, FILE *stream);
 
-int ConvertToFloat(const char *string, double *out);
-int ConvertToHex(const char *string, unsigned long long *out);
-int ConvertToDecSigned(const char *string, long long *out);
-int ConvertToDecUnsigned(const char *string, unsigned long long *out);
-int ConvertToOct(const char *string, unsigned long long *out);
-int ConvertToBin(const char *string, unsigned long long *out);
+/* the following will fail with magnitude chars, they should be trimmed first */
+#define CONVERT_DEFINE_PROTOTYPES_HELPERS(BITS, FLOAT)                        \
+    int ConvertToFloat##BITS(const char *string, FLOAT *out);                 \
+    int ConvertToHex##BITS(const char *string, uint##BITS##_t *out);          \
+    int ConvertToDecSigned##BITS(const char *string, int##BITS##_t *out);     \
+    int ConvertToDecUnsigned##BITS(const char *string, uint##BITS##_t *out);  \
+    int ConvertToOct##BITS(const char *string, uint##BITS##_t *out);          \
+    int ConvertToBin##BITS(const char *string, uint##BITS##_t *out);          \
+
+
+/* 64 bits */
+CONVERT_DEFINE_PROTOTYPES_MAIN(64)
+CONVERT_DEFINE_PROTOTYPES_HELPERS(64, double)
+
+/* 32 bits */
+CONVERT_DEFINE_PROTOTYPES_MAIN(32)
+CONVERT_DEFINE_PROTOTYPES_HELPERS(32, float)
 
 #endif /* CONVERT_H_ */
