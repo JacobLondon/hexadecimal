@@ -5,16 +5,16 @@
 #include <stdint.h>
 
 enum _convert_result_enum_ {
-    CONVERT_RESULT_INT,
-    CONVERT_RESULT_UINT,
-    CONVERT_RESULT_HEX,
-    CONVERT_RESULT_OCT,
-    CONVERT_RESULT_BIN,
-    CONVERT_RESULT_FLOAT,
+    CONVERT_RESULT_INT = 0x01,
+    CONVERT_RESULT_UINT = 0x02,
+    CONVERT_RESULT_HEX = 0x08 | CONVERT_RESULT_UINT,
+    CONVERT_RESULT_OCT = 0x10 | CONVERT_RESULT_UINT,
+    CONVERT_RESULT_BIN = 0x20 | CONVERT_RESULT_UINT,
+    CONVERT_RESULT_FLOAT = 0x40,
     /* boundary */
-    CONVERT_RESULT_ERROR,
-    CONVERT_RESULT_NULL_STRING,
-    CONVERT_RESULT_CANT_CONVERT,
+    CONVERT_RESULT_ERROR = 0x1000,
+    CONVERT_RESULT_NULL_STRING = 0x2000 | CONVERT_RESULT_ERROR,
+    CONVERT_RESULT_CANT_CONVERT = 0x4000 | CONVERT_RESULT_ERROR,
 };
 
 union _convert_result_value32_ {
@@ -47,6 +47,8 @@ int ConvertOrdToAscii(char *number);
 void ConvertSetMagnitudeChar(int sep); /* default is ',' */
 void ConvertSetDecimalChar(int dec); /* default is '.' */
 int ConvertRemoveMagnitudes(const char *input, char *output, size_t output_size);
+
+ConvertResult32 ConvertDowncast(ConvertResult64 in);
 
 #define CONVERT_DEFINE_PROTOTYPES_MAIN(BITS)                                  \
     ConvertResult##BITS ConvertString##BITS(const char *string);              \

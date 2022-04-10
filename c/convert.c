@@ -47,7 +47,7 @@ int ConvertOrdToAscii(char *number)
     return (int)actual;
 }
 
-static ConvertResult32 downcast(ConvertResult64 in)
+ConvertResult32 ConvertDowncast(ConvertResult64 in)
 {
     ConvertResult32 out;
     out.type = in.type;
@@ -138,7 +138,7 @@ ConvertResult64 ConvertString64(const char *string)
 
 ConvertResult32 ConvertString32(const char *string)
 {
-    return downcast(ConvertString64(string));
+    return ConvertDowncast(ConvertString64(string));
 }
 
 static int dump_int64(FILE *stream, int64_t value, int longform)
