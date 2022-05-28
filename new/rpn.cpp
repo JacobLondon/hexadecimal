@@ -10,13 +10,13 @@ v{nullptr}
 {
 }
 
-Value::Value(ValueBinop binop) :
+Value::Value(Value::Binop binop) :
 t{Value::VAL_BIN},
 v{.binop=binop}
 {
 }
 
-Value::Value(ValueUnop unop) :
+Value::Value(Value::Unop unop) :
 t{Value::VAL_UN},
 v{.unop=unop}
 {
@@ -49,7 +49,7 @@ int Calc::process()
                 return 1;
             }
 
-            ValueBinop op = value.v.binop;
+            Value::Binop op = value.v.binop;
             Value rhs = m_stack.top();
             m_stack.pop();
             Value lhs = m_stack.top();
@@ -69,7 +69,7 @@ int Calc::process()
                 return 1;
             }
 
-            ValueUnop op = value.v.unop;
+            Value::Unop op = value.v.unop;
             Value v = m_stack.top();
             m_stack.pop();
 

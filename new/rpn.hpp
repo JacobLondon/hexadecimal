@@ -13,18 +13,18 @@ struct Value {
         VAL_LIT  = 0x80, // Value
     } t;
 
-    typedef Value (* ValueBinop)(Value, Value);
-    typedef Value (* ValueUnop)(Value);
+    typedef Value (* Binop)(Value, Value);
+    typedef Value (* Unop)(Value);
 
     union {
-        ValueBinop binop;
-        ValueUnop unop;
+        Binop binop;
+        Unop unop;
         void *ptr;
     } v;
 
     Value();
-    Value(ValueBinop binop);
-    Value(ValueUnop unop);
+    Value(Binop binop);
+    Value(Unop unop);
     Value(void *ptr);
 };
 
