@@ -16,13 +16,13 @@ else
 MYPREFIX=/usr/local
 endif
 
-MYOBJS=util.o token.o hd.o
+MYOBJS=util.o hd.o
 
 .PHONY: clean install uninstall
 
 all: $(TARGET)
 
-MID_OBJS=rpn32.o rpn64.o
+MID_OBJS=rpn_include.o
 $(MID_OBJS): rpn.cc
 
 $(TARGET): $(MYOBJS) $(MID_OBJS)
@@ -33,10 +33,12 @@ clean:
 
 install: $(TARGET)
 	cp -f $(TARGET) $(MYPREFIX)/bin/
-	cp -f hexa.py $(MYPREFIX)/bin/
-	cp -f hexadecimal $(MYPREFIX)/bin/
+
+#cp -f hexa.py $(MYPREFIX)/bin/
+#cp -f hexadecimal $(MYPREFIX)/bin/
 
 uninstall:
 	rm -f $(MYPREFIX)/bin/$(TARGET)
-	rm -f $(MYPREFIX)/bin/hexa.py
-	rm -f $(MYPREFIX)/bin/hexadecimal
+
+#rm -f $(MYPREFIX)/bin/hexa.py
+#rm -f $(MYPREFIX)/bin/hexadecimal

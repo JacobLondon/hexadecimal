@@ -9,18 +9,24 @@
 
 static RpnVtable rpn64 = RPN_VTABLE(64);
 static RpnVtable rpn32 = RPN_VTABLE(32);
+static RpnVtable rpn16 = RPN_VTABLE(16);
+static RpnVtable rpn8  = RPN_VTABLE(8);
 static RpnVtable *rpn = &rpn64;
 bool _verbose = false; // extern
+bool _longform = false; // extern
 
 typedef void (* prog_func)(int argc, char **argv);
 
 static void func_rpn(int argc, char **argv) noexcept;
-static void func_tok(int argc, char **argv) noexcept;
+//static void func_tok(int argc, char **argv) noexcept;
 static void func_help(int argc, char **argv) noexcept;
+static void func_8(int argc, char **argv) noexcept;
+static void func_16(int argc, char **argv) noexcept;
 static void func_32(int argc, char **argv) noexcept;
 static void func_64(int argc, char **argv) noexcept;
 static void func_ord(int argc, char **argv) noexcept;
 static void func_chr(int argc, char **argv) noexcept;
+static void func_long(int argc, char **argv) noexcept;
 static void func_verbose(int argc, char **argv) noexcept;
 static void func_table(int argc, char **argv) noexcept;
 static void func_extable(int argc, char **argv) noexcept;
@@ -44,15 +50,18 @@ static struct {
     const char *whatdo;
 } argTable[] = {
     XENTRY("-h", "--help", func_help, "View this help and exit"),
+    XENTRY(NULL, "--8", func_8, "Set the operation word size to 8 bits, no floats"),
+    XENTRY(NULL, "--16", func_16, "Set the operation word size to 16 bits, no floats"),
     XENTRY(NULL, "--32", func_32, "Set the operation word size to 32 bits"),
     XENTRY(NULL, "--64", func_64, "Set the operation word size to 64 bits (default)"),
     XENTRY(NULL, "--chr", func_chr, "Get the character of the first number and exit"),
     XENTRY(NULL, "--ord", func_ord, "Get the code of the first character and exit"),
+    XENTRY("-l", "--long", func_long, "Print all parts of the number, including leading zeros"),
     XENTRY(NULL, "--table", func_table, "Get the ASCII table and exit"),
     XENTRY(NULL, "--extable", func_extable, "Get the ASCII table and its extended set and exit"),
     XENTRY("-v", "--verbose", func_verbose, "Display errors"),
-    XENTRY("-r", "--rpn", func_rpn, "Parse the arguments in Reverse Polish Notation (RPN), default"),
-    XENTRY("-t", "--tok", func_tok, "Explicitly through tokenization"),
+    //XENTRY("-r", "--rpn", func_rpn, "Parse the arguments in Reverse Polish Notation (RPN), default"),
+    //XENTRY("-t", "--tok", func_tok, "Explicitly through tokenization"),
     XENTRY(NULL, NULL, NULL, NULL)
 };
 #undef XENTRY
@@ -94,6 +103,7 @@ static void func_rpn(int argc, char **argv) noexcept {
     exit(0);
 }
 
+#if 0
 static void func_tok(int argc, char **argv) noexcept {
     void *tokenizer = tokenizer_create();
     if (!tokenizer) {
@@ -136,6 +146,7 @@ static void func_tok(int argc, char **argv) noexcept {
     tokenizer_destroy(tokenizer);
     exit(0);
 }
+#endif
 
 static void func_help(int argc, char **argv) noexcept {
     char buf[256];
@@ -166,6 +177,18 @@ static void func_help(int argc, char **argv) noexcept {
         exit(1);
     }
     exit(0);
+}
+
+static void func_8(int argc, char **argv) noexcept {
+    (void)argc;
+    (void)argv;
+    rpn = &rpn8;
+}
+
+static void func_16(int argc, char **argv) noexcept {
+    (void)argc;
+    (void)argv;
+    rpn = &rpn16;
 }
 
 static void func_32(int argc, char **argv) noexcept {
@@ -209,6 +232,12 @@ static void func_verbose(int argc, char **argv) noexcept {
     (void)argc;
     (void)argv;
     _verbose = true;
+}
+
+static void func_long(int argc, char **argv) noexcept {
+    (void)argc;
+    (void)argv;
+    _longform = true;
 }
 
 static void func_table(int argc, char **argv) noexcept {

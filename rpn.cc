@@ -2,7 +2,73 @@
 #include "rpn.hh"
 #endif
 
-#ifdef RPN_32BITS
+#if defined(RPN_8BITS)
+// https://en.wikipedia.org/wiki/Minifloat
+#define NO_FLOAT
+#define Float Int
+typedef int8_t Int;
+typedef uint8_t Uint;
+#define FMT_FLOAT "%hhi"
+#define FMT_INT "%hhi"
+#define FMT_UINT "%hhu"
+#define FMT_HEX "%hhX"
+#define FMT_OCT "%hho"
+#define FMT_LONG_HEX "%02hhX"
+#define FMT_LONG_OCT "%03hho"
+#define FLOAT_MOD(a, b) (a % b)
+#define FLOAT_POW(a, b) (Float)int_pow(a, b)
+#define FLOAT_SQRT(...) (Float)sqrtf(__VA_ARGS__)
+#define FLOAT_SIN(...) (Float)sinf(__VA_ARGS__)
+#define FLOAT_COS(...) (Float)cosf(__VA_ARGS__)
+#define FLOAT_TAN(...) (Float)tanf(__VA_ARGS__)
+#define FLOAT_FLOOR(...) (Float)floorf(__VA_ARGS__)
+#define FLOAT_ROUND(...) (Float)roundf(__VA_ARGS__)
+#define FLOAT_LOG10(...) (Float)log10f(__VA_ARGS__)
+#define FLOAT_LOG(...) (Float)logf(__VA_ARGS__)
+#define FLOAT_ZERO 0
+union FloatInfo { // on a Big Endian machine will need to convert to LE first
+    Float f;
+    struct {
+        Uint mantissa : 3;
+        Uint exponent : 4;
+        Uint sign : 1;
+    } parts;
+};
+
+#elif defined(RPN_16BITS)
+// https://en.wikipedia.org/wiki/Half-precision_floating-point_format
+#define NO_FLOAT
+#define Float Int
+typedef int16_t Int;
+typedef uint16_t Uint;
+#define FMT_FLOAT "%hi"
+#define FMT_INT "%hi"
+#define FMT_UINT "%hu"
+#define FMT_HEX "%hX"
+#define FMT_OCT "%ho"
+#define FMT_LONG_HEX "%04hX"
+#define FMT_LONG_OCT "%06ho"
+#define FLOAT_MOD(a, b) (a % b)
+#define FLOAT_POW(a, b) (Float)int_pow(a, b)
+#define FLOAT_SQRT(...) (Float)sqrtf(__VA_ARGS__)
+#define FLOAT_SIN(...) (Float)sinf(__VA_ARGS__)
+#define FLOAT_COS(...) (Float)cosf(__VA_ARGS__)
+#define FLOAT_TAN(...) (Float)tanf(__VA_ARGS__)
+#define FLOAT_FLOOR(...) (Float)floorf(__VA_ARGS__)
+#define FLOAT_ROUND(...) (Float)roundf(__VA_ARGS__)
+#define FLOAT_LOG10(...) (Float)log10f(__VA_ARGS__)
+#define FLOAT_LOG(...) (Float)logf(__VA_ARGS__)
+#define FLOAT_ZERO 0
+union FloatInfo { // on a Big Endian machine will need to convert to LE first
+    Float f;
+    struct {
+        Uint mantissa : 10;
+        Uint exponent : 5;
+        Uint sign : 1;
+    } parts;
+};
+
+#elif defined(RPN_32BITS)
 typedef float Float;
 typedef int32_t Int;
 typedef uint32_t Uint;
@@ -11,6 +77,8 @@ typedef uint32_t Uint;
 #define FMT_UINT "%u"
 #define FMT_HEX "%X"
 #define FMT_OCT "%o"
+#define FMT_LONG_HEX "%08X"
+#define FMT_LONG_OCT "%011o"
 #define FLOAT_MOD(...) fmodf(__VA_ARGS__)
 #define FLOAT_POW(...) powf(__VA_ARGS__)
 #define FLOAT_SQRT(...) sqrtf(__VA_ARGS__)
@@ -30,7 +98,8 @@ union FloatInfo { // on a Big Endian machine will need to convert to LE first
         Uint sign : 1;
     } parts;
 };
-#else
+
+#elif defined(RPN_64BITS)
 typedef double Float;
 typedef int64_t Int;
 typedef uint64_t Uint;
@@ -39,6 +108,8 @@ typedef uint64_t Uint;
 #define FMT_UINT "%lu"
 #define FMT_HEX "%lX"
 #define FMT_OCT "%lo"
+#define FMT_LONG_HEX "%016lX"
+#define FMT_LONG_OCT "%022lo"
 #define FLOAT_MOD(...) fmod(__VA_ARGS__)
 #define FLOAT_POW(...) pow(__VA_ARGS__)
 #define FLOAT_SQRT(...) sqrt(__VA_ARGS__)
@@ -120,7 +191,9 @@ struct Value {
     Value() noexcept;
     Value(Int number) noexcept;
     Value(Uint number) noexcept;
+#ifndef NO_FLOAT
     Value(Float number) noexcept;
+#endif
     Value(const char *value) noexcept;
 
     void print() noexcept;
@@ -627,9 +700,9 @@ static Value binop_none(Value& lhs, Value& rhs) noexcept {
 static Value binop_add(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
     switch (lhs.type) {
-    case TYPE_FLOAT: return Value(lhs.number.f + rhs.number.f);
-    case TYPE_INT:   return Value(lhs.number.i + rhs.number.i);
-    case TYPE_UINT:  return Value(lhs.number.u + rhs.number.u);
+    case TYPE_FLOAT: return Value((Float)(lhs.number.f + rhs.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i + rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u + rhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();
@@ -638,9 +711,9 @@ static Value binop_add(Value& lhs, Value& rhs) noexcept {
 static Value binop_sub(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
     switch (lhs.type) {
-    case TYPE_FLOAT: return Value(lhs.number.f - rhs.number.f);
-    case TYPE_INT:   return Value(lhs.number.i - rhs.number.i);
-    case TYPE_UINT:  return Value(lhs.number.u - rhs.number.u);
+    case TYPE_FLOAT: return Value((Float)(lhs.number.f - rhs.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i - rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u - rhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();
@@ -649,9 +722,9 @@ static Value binop_sub(Value& lhs, Value& rhs) noexcept {
 static Value binop_mul(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
     switch (lhs.type) {
-    case TYPE_FLOAT: return Value(lhs.number.f * rhs.number.f);
-    case TYPE_INT:   return Value(lhs.number.i * rhs.number.i);
-    case TYPE_UINT:  return Value(lhs.number.u * rhs.number.u);
+    case TYPE_FLOAT: return Value((Float)(lhs.number.f * rhs.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i * rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u * rhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();
@@ -660,9 +733,9 @@ static Value binop_mul(Value& lhs, Value& rhs) noexcept {
 static Value binop_div(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
     switch (lhs.type) {
-    case TYPE_FLOAT: return Value(lhs.number.f / rhs.number.f);
-    case TYPE_INT:   return Value(lhs.number.i / rhs.number.i);
-    case TYPE_UINT:  return Value(lhs.number.u / rhs.number.u);
+    case TYPE_FLOAT: return Value((Float)(lhs.number.f / rhs.number.f));
+    case TYPE_INT:   return Value((Int)(lhs.number.i / rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)(lhs.number.u / rhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();
@@ -1254,6 +1327,7 @@ Value::Value(const char *value) noexcept :
     number.s = value;
 }
 
+#ifndef NO_FLOAT
 Value::Value(Float f) noexcept :
     number{0},
     type{TYPE_FLOAT},
@@ -1261,6 +1335,7 @@ Value::Value(Float f) noexcept :
 {
     number.f = f;
 }
+#endif
 
 Value::Value(Int i) noexcept :
     number{0},
@@ -1278,25 +1353,35 @@ Value::Value(Uint u) noexcept :
     number.u = u;
 }
 
-void Value::print() noexcept {
-    switch (this->fmt) {
+#define LONG_PRINTF(prefix, longformat, format, value, end) \
+do { \
+    if (_longform) { \
+        fprintf(stdout, prefix longformat "%s", value, end); \
+    } else { \
+        fprintf(stdout, prefix format "%s", value, end); \
+    } \
+} while (0)
+
+static void do_print(Value& v, const char *end) noexcept {
+    assert(end != NULL);
+    switch (v.fmt) {
     case FORMAT_DEC:
         break;
     case FORMAT_HEX:
     hex:
-        fprintf(stdout, "0x" FMT_HEX " ", this->number.u);
+        LONG_PRINTF("0x", FMT_LONG_HEX, FMT_HEX, v.number.u, end);
         return;
     case FORMAT_OCT:
-        fprintf(stdout, "0o" FMT_OCT " ", this->number.u);
+        LONG_PRINTF("0o", FMT_LONG_OCT, FMT_OCT, v.number.u, end);
         return;
     case FORMAT_BIN:
-        print_binary(this->number.u);
-        fprintf(stdout, " ");
+        print_binary(v.number.u);
+        fprintf(stdout, "%s", end);
         return;
     case FORMAT_BIG:
         if (is_little_endian()) {
-            print_reversed(this->number.u);
-            fprintf(stdout, " ");
+            print_reversed(v.number.u);
+            fprintf(stdout, "%s", end);
             return;
         }
         else {
@@ -1304,8 +1389,8 @@ void Value::print() noexcept {
         }
     case FORMAT_LITTLE:
         if (is_big_endian()) {
-            print_reversed(this->number.u);
-            fprintf(stdout, " ");
+            print_reversed(v.number.u);
+            fprintf(stdout, "%s", end);
             return;
         }
         else {
@@ -1316,69 +1401,26 @@ void Value::print() noexcept {
         break;
     }
 
-    switch (this->type) {
+    switch (v.type) {
     case TYPE_FLOAT:
-        std::cout << this->number.f << " ";
+        std::cout << v.number.f << end;
         break;
     case TYPE_INT:
-        std::cout << this->number.i << " ";
+        std::cout << v.number.i << end;
         break;
     case TYPE_UINT:
-        std::cout << this->number.u << " ";
+        std::cout << v.number.u << end;
         break;
     }
     fflush(stdout);
 }
 
-void Value::println() noexcept {
-    switch (this->fmt) {
-    case FORMAT_DEC:
-        break;
-    case FORMAT_HEX:
-    hex:
-        fprintf(stdout, "0x" FMT_HEX "\n", this->number.u);
-        return;
-    case FORMAT_OCT:
-        fprintf(stdout, "0o" FMT_OCT "\n", this->number.u);
-        return;
-    case FORMAT_BIN:
-        print_binary(this->number.u);
-        fprintf(stdout, "\n");
-        return;
-    case FORMAT_BIG:
-        if (is_little_endian()) {
-            print_reversed(this->number.u);
-            fprintf(stdout, "\n");
-            return;
-        }
-        else {
-            goto hex;
-        }
-    case FORMAT_LITTLE:
-        if (is_big_endian()) {
-            print_reversed(this->number.u);
-            fprintf(stdout, "\n");
-            return;
-        }
-        else {
-            goto hex;
-        }
-    default:
-        assert(0);
-        break;
-    }
+void Value::print() noexcept {
+    do_print(*this, " ");
+}
 
-    switch (this->type) {
-    case TYPE_FLOAT:
-        std::cout << this->number.f << std::endl;
-        break;
-    case TYPE_INT:
-        std::cout << this->number.i << std::endl;
-        break;
-    case TYPE_UINT:
-        std::cout << this->number.u << std::endl;
-        break;
-    }
+void Value::println() noexcept {
+    do_print(*this, "\n");
 }
 
 static void print_binary(Uint value) noexcept {
@@ -1387,7 +1429,7 @@ static void print_binary(Uint value) noexcept {
     fprintf(stdout, "0b");
     fflush(stdout);
     for (int i = size; i >= 0; i--) {
-        if ((Uint)(((Uint)1) << (Uint)i) > value) {
+        if (!_longform && ((Uint)(((Uint)1) << (Uint)i) > value)) {
             continue;
         }
         fprintf(stdout, "%u", (unsigned)((value >> i) & 1));
@@ -1515,3 +1557,26 @@ Value Value::unexpected_type(void) noexcept {
     return Value();
 }
 
+#ifdef NO_FLOAT
+#undef NO_FLOAT
+#undef Float
+#endif
+
+#undef FMT_FLOAT
+#undef FMT_INT
+#undef FMT_UINT
+#undef FMT_HEX
+#undef FMT_OCT
+#undef FMT_LONG_HEX
+#undef FMT_LONG_OCT
+#undef FLOAT_MOD
+#undef FLOAT_POW
+#undef FLOAT_SQRT
+#undef FLOAT_SIN
+#undef FLOAT_COS
+#undef FLOAT_TAN
+#undef FLOAT_FLOOR
+#undef FLOAT_ROUND
+#undef FLOAT_LOG10
+#undef FLOAT_LOG
+#undef FLOAT_ZERO

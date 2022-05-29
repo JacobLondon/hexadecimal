@@ -131,6 +131,31 @@ void rpn_help() noexcept;
 
 }
 
+namespace Rpn16 {
+
+struct Rpn;
+Rpn *rpn_create() noexcept;
+void rpn_exec(Rpn *self) noexcept;
+void rpn_push(Rpn *self, char *value) noexcept;
+void rpn_print(Rpn *self) noexcept;
+void rpn_destroy(Rpn *self) noexcept;
+void rpn_help() noexcept;
+
+}
+
+namespace Rpn8 {
+
+struct Rpn;
+Rpn *rpn_create() noexcept;
+void rpn_exec(Rpn *self) noexcept;
+void rpn_push(Rpn *self, char *value) noexcept;
+void rpn_print(Rpn *self) noexcept;
+void rpn_destroy(Rpn *self) noexcept;
+void rpn_help() noexcept;
+
+}
+
 extern bool _verbose;
+extern bool _longform;
 
 #endif // HD_RPN_H
