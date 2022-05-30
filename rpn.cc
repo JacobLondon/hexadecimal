@@ -163,6 +163,7 @@ enum Format {
     FORMAT_BIN,
     FORMAT_BIG,
     FORMAT_LITTLE,
+    FORMAT_CHAR,
     FORMAT_COUNT
 };
 
@@ -173,6 +174,7 @@ static const char *formatTable[] = {
     "bin",
     "big", // endianness
     "little",
+    "chr",
     "",
 };
 
@@ -1366,23 +1368,34 @@ static void do_print(Value& v, const char *end) noexcept {
     assert(end != NULL);
     switch (v.fmt) {
     case FORMAT_DEC:
+        switch (v.type) {
+        case TYPE_FLOAT:
+            std::cout << v.number.f << end;
+            break;
+        case TYPE_INT:
+            std::cout << v.number.i << end;
+            break;
+        case TYPE_UINT:
+            std::cout << v.number.u << end;
+            break;
+        }
         break;
     case FORMAT_HEX:
     hex:
         LONG_PRINTF("0x", FMT_LONG_HEX, FMT_HEX, v.number.u, end);
-        return;
+        break;
     case FORMAT_OCT:
         LONG_PRINTF("0o", FMT_LONG_OCT, FMT_OCT, v.number.u, end);
-        return;
+        break;
     case FORMAT_BIN:
         print_binary(v.number.u);
         fprintf(stdout, "%s", end);
-        return;
+        break;
     case FORMAT_BIG:
         if (is_little_endian()) {
             print_reversed(v.number.u);
             fprintf(stdout, "%s", end);
-            return;
+            break;
         }
         else {
             goto hex;
@@ -1391,25 +1404,26 @@ static void do_print(Value& v, const char *end) noexcept {
         if (is_big_endian()) {
             print_reversed(v.number.u);
             fprintf(stdout, "%s", end);
-            return;
+            break;
         }
         else {
             goto hex;
         }
+    case FORMAT_CHAR:
+        switch (v.type) {
+        case TYPE_FLOAT:
+            fprintf(stdout, "%s%s", ascii_lookup(v.number.f), end);
+            break;
+        case TYPE_INT:
+            fprintf(stdout, "%s%s", ascii_lookup(v.number.i), end);
+            break;
+        case TYPE_UINT:
+            fprintf(stdout, "%s%s", ascii_lookup(v.number.u), end);
+            break;
+        }
+        break;
     default:
         assert(0);
-        break;
-    }
-
-    switch (v.type) {
-    case TYPE_FLOAT:
-        std::cout << v.number.f << end;
-        break;
-    case TYPE_INT:
-        std::cout << v.number.i << end;
-        break;
-    case TYPE_UINT:
-        std::cout << v.number.u << end;
         break;
     }
     fflush(stdout);

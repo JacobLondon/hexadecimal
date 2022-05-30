@@ -11,6 +11,13 @@
 #include <string.h>
 #include <strings.h> // strcasecmp
 
+#if 0
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif
+#include <inttypes.h>
+#endif
+
 #include "rpn.hpp"
 #include "util.hpp"
 

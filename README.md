@@ -86,17 +86,21 @@ $ hd pi sep e sep nan sep inf sep inf -1 mul
 # get the ASCII table
 $ hd --table
 
-# chr lookup
+# manual chr lookup
 $ hd --chr 10
+\n
+# chr operation
+$ hd 10 chr as
 \n
 
 # manual ord lookup
 $ hd --ord a
 97
-
 # ord operation and math
 $ hd a ord 1 add
 98
+$ hd a ord 1 add chr as
+b
 ```
 
 ## Programs
@@ -106,7 +110,6 @@ $ hd a ord 1 add
 
 ## TODO
 * Allow underscores to make it easier to enter and display
-* Make 'ord' and 'chr' an operation
 * Eliminate undefined or unexpected behavior in rpn program
 * Pivot point can't find negative numbers. Only works with `--rpn`
 * `./hd -v 0 -1 abs` should work, but it also thinks this is a binary op error. Only works with `--rpn`

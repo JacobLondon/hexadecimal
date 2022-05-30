@@ -9,4 +9,6 @@ void swap(unsigned long *a, unsigned long *b);
 bool is_little_endian(void);
 bool is_big_endian(void);
 
+const char *ascii_lookup(int chr) noexcept;
+
 #endif // HD_MATH_H

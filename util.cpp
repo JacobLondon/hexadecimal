@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include "util.hpp"
 
 /**
@@ -86,4 +87,61 @@ bool is_little_endian(void)
 bool is_big_endian(void)
 {
 	return !is_little_endian();
+}
+
+const char *ascii_lookup(int chr) noexcept {
+    static bool firstTime = true;
+    static char buf[4] = {0};
+    static const char *table[128];
+
+    if (firstTime) {
+        firstTime = false;
+        table[0] = "NUL"; // null
+        table[1] = "SOH"; // start of heading
+        table[2] = "STX"; // start of text
+        table[3] = "ETX"; // end of text
+        table[4] = "EOT"; // end of transmission
+        table[5] = "ENQ"; // enquiry
+        table[6] = "ACK"; // acknowledge
+        table[7] = "\\a"; // BEL, ALERT, bell
+        table[8] = "\\b"; // BS, backspace
+        table[9] = "\\t"; // TAB, horizontal tab
+        table[10] = "\\n"; // LF, line feed
+        table[11] = "\\v"; // VT, vertical tab
+        table[12] = "FF"; // NP, form feed, new page
+        table[13] = "\\r"; // CR, carriage return
+        table[14] = "SO"; // shift out
+        table[15] = "SI"; // shift in
+        table[16] = "DLE"; // data link escape
+        table[17] = "DC1"; // device control 1
+        table[18] = "DC2"; // device control 2
+        table[19] = "DC3"; // device control 3
+        table[20] = "DC4"; // device control 4
+        table[21] = "NAK"; // negative acknowledge
+        table[22] = "SYN"; // synchronous idle
+        table[23] = "ETB"; // end of transmission block
+        table[24] = "CAN"; // cancel
+        table[25] = "EM"; // end of medium
+        table[26] = "SUB"; // substitute
+        table[27] = "\\e"; // ESC, escape
+        table[28] = "FS"; // file seperator
+        table[29] = "GS"; // group seperator
+        table[30] = "RS"; // record seperator
+        table[31] = "US"; // unit seperator
+        table[32] = "SPACE"; // space
+        table[127] = "DEL"; // delete
+    }
+
+    if (chr < 0 || chr > 255) {
+        return "";
+    }
+
+    // less printable
+    if ((0 <= chr && chr <= 32) || chr == 127) {
+        return table[chr];
+    }
+
+    // printable
+    snprintf(buf, sizeof(buf), "%c", chr);
+    return buf;
 }
