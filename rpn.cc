@@ -77,6 +77,7 @@ typedef uint32_t Uint;
 #define FMT_UINT "%u"
 #define FMT_HEX "%X"
 #define FMT_OCT "%o"
+#define FMT_LONG_FLOAT "%.10f"
 #define FMT_LONG_HEX "%08X"
 #define FMT_LONG_OCT "%011o"
 #define FLOAT_MOD(...) fmodf(__VA_ARGS__)
@@ -108,6 +109,7 @@ typedef uint64_t Uint;
 #define FMT_UINT "%lu"
 #define FMT_HEX "%lX"
 #define FMT_OCT "%lo"
+#define FMT_LONG_FLOAT "%.20lf"
 #define FMT_LONG_HEX "%016lX"
 #define FMT_LONG_OCT "%022lo"
 #define FLOAT_MOD(...) fmod(__VA_ARGS__)
@@ -505,7 +507,7 @@ void rpn_help() noexcept {
     }
     EPRINT("\n\n");
 
-    EPRINT("Types can be used as the rhs operand of 'as' or 'to' operations\n\n\t");
+    EPRINT("Types can be used as the rhs operand of 'as' or 'cast' operations\n\n\t");
     for (int i = 0; i < TYPE_COUNT; i++) {
         EPRINT("%s ", typeTable[i]);
         fflush(stderr);
@@ -1370,13 +1372,18 @@ static void do_print(Value& v, const char *end) noexcept {
     case FORMAT_DEC:
         switch (v.type) {
         case TYPE_FLOAT:
-            std::cout << v.number.f << end;
+            #ifdef FMT_LONG_FLOAT
+                LONG_PRINTF("", FMT_LONG_FLOAT, FMT_FLOAT, v.number.f, end);
+            #else
+                fprintf(stdout, FMT_FLOAT "%s", v.number.f, end);
+            #endif
+
             break;
         case TYPE_INT:
-            std::cout << v.number.i << end;
+            fprintf(stdout, FMT_INT "%s", v.number.i, end);
             break;
         case TYPE_UINT:
-            std::cout << v.number.u << end;
+            fprintf(stdout, FMT_UINT "%s", v.number.u, end);
             break;
         }
         break;
@@ -1574,6 +1581,8 @@ Value Value::unexpected_type(void) noexcept {
 #ifdef NO_FLOAT
 #undef NO_FLOAT
 #undef Float
+#else
+#undef FMT_LONG_FLOAT
 #endif
 
 #undef FMT_FLOAT
