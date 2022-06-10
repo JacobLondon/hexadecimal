@@ -1241,9 +1241,9 @@ static Value unop_info(Value &lhs) noexcept {
         fi.f = lhs.number.f;
         // Note the sizing of these parts is weird. This works:
         fprintf(stdout, "%u, %u, " FMT_UINT "\n",
-            fi.parts.sign, fi.parts.exponent, fi.parts.mantissa);
+            (unsigned)fi.parts.sign, (unsigned)fi.parts.exponent, fi.parts.mantissa);
         fprintf(stdout, "%d, 0x%X, 0x" FMT_HEX "\n",
-            fi.parts.sign, fi.parts.exponent, fi.parts.mantissa);
+            (signed)fi.parts.sign, (unsigned)fi.parts.exponent, fi.parts.mantissa);
         fflush(stdout);
         return lhs;
     }
