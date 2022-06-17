@@ -1170,8 +1170,7 @@ static Uint rol(Uint a, Uint b) noexcept {
 static Value binop_ror(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
     switch (lhs.type) {
-    case TYPE_FLOAT:
-    {
+    case TYPE_FLOAT: {
         Value tmp = Value(ror((Uint)lhs.number.u, (Uint)rhs.number.f));
         tmp.pun(TYPE_FLOAT);
         return tmp;
@@ -1186,8 +1185,7 @@ static Value binop_ror(Value& lhs, Value& rhs) noexcept {
 static Value binop_rol(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
     switch (lhs.type) {
-    case TYPE_FLOAT:
-    {
+    case TYPE_FLOAT: {
         Value tmp = Value(rol((Uint)lhs.number.u, (Uint)rhs.number.f));
         tmp.pun(TYPE_FLOAT);
         return tmp;

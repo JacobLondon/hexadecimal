@@ -4,17 +4,22 @@
 #define REG_BIN "(0[bB][01]+)"
 #define REG_OCT "(0[oO][01234567]+)"
 #define REG_HEX "(0[xX][0123456789aAbBcCdDeEfF]+)"
-#define REG_DEC "([+-]?((0)|([123456789][1234567890]*)))"
+//#define REG_DEC "([+-]?((0)|([123456789][1234567890]*)))"
 
-#define REG_CONSTANT "pi|e|inf|nan"
+//#define REG_CONSTANT "pi|e|inf|nan"
 #define REG_UNSIGNED "(0|([123456789][0123456789]*))"
 #define REG_SIGNED "([+-](0|([123456789][0123456789]*)))"
-#define REG_FLOAT "([+-]?((0?\\.[0123456789]+)|((0\\.)|([123456789][0123456789]*\\.[0123456789]*))))"
-#define REG_NUMBER "^(" REG_BIN "|" REG_OCT "|" REG_HEX "|" REG_FLOAT "|" REG_DEC "|" REG_CONSTANT ")"
-#define REG_TYPE "int|uint|float|string"
-#define REG_FORMAT "dec|hex|oct|bin|big|little"
-#define REG_TOKEN REG_NUMBER "|" "(" REG_TYPE "|" REG_FORMAT ")" "[\\s\\n\\r]*"
-#define REG_PIVOT REG_NUMBER "$"
+#define REG_FLOAT \
+    "([+-]?((0?\\.[0123456789]+)|" \
+    "([+-]?(0\\.)([eE][+-]?[0123456789]+)?|" \
+    "([+-]?[123456789][0123456789]*\\.[0123456789]*))))([eE][+-]?[0123456789]+)?|" \
+    "([+-]?[123456789][0123456789]*([eE][+-]?[0123456789]+))"
+
+//#define REG_NUMBER "^(" REG_BIN "|" REG_OCT "|" REG_HEX "|" REG_FLOAT "|" REG_DEC "|" REG_CONSTANT ")"
+//#define REG_TYPE "int|uint|float|string"
+//#define REG_FORMAT "dec|hex|oct|bin|big|little"
+//#define REG_TOKEN REG_NUMBER "|" "(" REG_TYPE "|" REG_FORMAT ")" "[\\s\\n\\r]*"
+//#define REG_PIVOT REG_NUMBER "$"
 
 #define REG_OP_BITANDINV_SYM "&~"
 #define REG_OP_BITANDINV "bitandinv"

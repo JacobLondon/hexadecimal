@@ -100,3 +100,4 @@ b
 
 ## TODO
 * Allow underscores to make it easier to enter and display
+* Support different formats for numbers
