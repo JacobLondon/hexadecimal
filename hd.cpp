@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
+
 #include "rpn.hpp"
-#include "token.hpp"
 #include "util.hpp"
 
 static RpnVtable rpn64 = RPN_VTABLE(64);
@@ -13,13 +13,12 @@ static RpnVtable rpn32 = RPN_VTABLE(32);
 static RpnVtable rpn16 = RPN_VTABLE(16);
 static RpnVtable rpn8  = RPN_VTABLE(8);
 static RpnVtable *rpn = &rpn64;
-bool _verbose = false; // extern
+bool _verbose = true; // extern
 bool _longform = false; // extern
 
 typedef void (* prog_func)(int argc, char **argv);
 
 static void func_rpn(int argc, char **argv) noexcept;
-//static void func_tok(int argc, char **argv) noexcept;
 static void func_help(int argc, char **argv) noexcept;
 static void func_8(int argc, char **argv) noexcept;
 static void func_16(int argc, char **argv) noexcept;
@@ -49,7 +48,6 @@ static struct {
     prog_func program;
     const char *whatdo;
 } argTable[] = {
-    XENTRY("-h", "--help", func_help, "View this help and exit"),
     XENTRY(NULL, "--8", func_8, "Set the operation word size to 8 bits, no floats"),
     XENTRY(NULL, "--16", func_16, "Set the operation word size to 16 bits, no floats"),
     XENTRY(NULL, "--32", func_32, "Set the operation word size to 32 bits"),
@@ -59,9 +57,8 @@ static struct {
     XENTRY("-l", "--long", func_long, "Print all parts of the number, including leading zeros"),
     XENTRY(NULL, "--table", func_table, "Get the ASCII table and exit"),
     XENTRY(NULL, "--extable", func_extable, "Get the ASCII table and its extended set and exit"),
-    XENTRY("-v", "--verbose", func_verbose, "Display errors"),
-    //XENTRY("-r", "--rpn", func_rpn, "Parse the arguments in Reverse Polish Notation (RPN), default"),
-    //XENTRY("-t", "--tok", func_tok, "Explicitly through tokenization"),
+    XENTRY("-q", "--quiet", func_verbose, "Don't print errors to stderr"),
+    XENTRY("-h", "--help", func_help, "View this help and exit"),
     XENTRY(NULL, NULL, NULL, NULL)
 };
 #undef XENTRY
@@ -103,51 +100,6 @@ static void func_rpn(int argc, char **argv) noexcept {
     exit(0);
 }
 
-#if 0
-static void func_tok(int argc, char **argv) noexcept {
-    void *tokenizer = tokenizer_create();
-    if (!tokenizer) {
-        if (_verbose) {
-            fprintf(stderr, "Out of memory\n");
-        }
-        exit(ENOMEM);
-    }
-
-    for (int i = 1; i < argc; i++) {
-        if (tokenizer_tokenize(tokenizer, argv[i], _verbose) != 0) {
-            exit(1);
-        }
-    }
-    tokenizer_end(tokenizer);
-    void *calc = rpn->create();
-
-    size_t cursor = 0;
-    Token *tmp;
-    do {
-        tmp = tokenizer_gettok(tokenizer, &cursor);
-        switch (tmp->token) {
-        case TOKEN_VALUE: // fallthrough
-        case TOKEN_UNOP: // fallthrough
-        case TOKEN_BINOP:
-            rpn->push(calc, (char *)tmp->value.c_str());
-            break;
-        case TOKEN_UNKN: // fallthrough
-        case TOKEN_LPAREN: // fallthrough
-        case TOKEN_RPAREN: // fallthrough
-        case TOKEN_EOF: // fallthrough
-        default:
-            break;
-        }
-    } while (tmp && tmp->token != TOKEN_EOF);
-
-    rpn->exec(calc);
-    rpn->print(calc);
-    rpn->destroy(calc);
-    tokenizer_destroy(tokenizer);
-    exit(0);
-}
-#endif
-
 static void func_help(int argc, char **argv) noexcept {
     char buf[256];
     int n;
@@ -169,7 +121,6 @@ static void func_help(int argc, char **argv) noexcept {
     }
 
     fprintf(stderr, "\nPROGRAM\n\n");
-    func_verbose(0, NULL);
     rpn->help();
     fprintf(stderr, "\n");
 
@@ -204,15 +155,23 @@ static void func_64(int argc, char **argv) noexcept {
 }
 
 static void func_ord(int argc, char **argv) noexcept {
-    (void)argc;
-    (void)argv;
+    if (argc < 2) {
+        if (_verbose) fprintf(stderr, "ord: Missing value\n");
+        exit(1);
+    }
+
     printf("%d\n", argv[1][0]);
     exit(0);
 }
 
 static void func_chr(int argc, char **argv) noexcept {
     int chr;
-    (void)argc;
+
+    if (argc < 2) {
+        if (_verbose) fprintf(stderr, "chr: Missing value\n");
+        exit(1);
+    }
+
     if (sscanf(argv[1], "%d", &chr) != 1) {
         fprintf(stderr, "'%s' cannot be converted to a code\n", argv[1]);
         exit(1);
@@ -231,7 +190,7 @@ static void func_chr(int argc, char **argv) noexcept {
 static void func_verbose(int argc, char **argv) noexcept {
     (void)argc;
     (void)argv;
-    _verbose = true;
+    _verbose = false;
 }
 
 static void func_long(int argc, char **argv) noexcept {
@@ -240,30 +199,38 @@ static void func_long(int argc, char **argv) noexcept {
     _longform = true;
 }
 
-static void func_table(int argc, char **argv) noexcept {
-    (void)argc;
-    (void)argv;
-    for (int i = 0; i < 128 / 4; i++) {
+static void print_table(void) noexcept {
+    for (int i = 0; i < (128 / 4); i++) {
         print_section(i, "\t");
         print_section(i + 128 / 4, "\t");
         print_section(i + 128 / 2, "\t");
         print_section(i + 128 * 3 / 4, "\n");
         fflush(stdout);
     }
+}
+
+static void ext_table(void) noexcept {
+    for (int i = 128; i < (128 + (128 / 4)); i++) {
+        print_section(i, "\t");
+        print_section(i + 128 / 4, "\t");
+        print_section(i + 128 / 2, "\t");
+        print_section(i + 128 * 3 / 4, "\n");
+        fflush(stdout);
+    }
+}
+
+static void func_table(int argc, char **argv) noexcept {
+    (void)argc;
+    (void)argv;
+    print_table();
     exit(0);
 }
 
 static void func_extable(int argc, char **argv) noexcept {
     (void)argc;
     (void)argv;
-    func_table(0, NULL);
-    for (int i = 128; i < 128 + 128 / 4; i++) {
-        print_section(i, "\t");
-        print_section(i + 128 / 4, "\t");
-        print_section(i + 128 / 2, "\t");
-        print_section(i + 128 * 3 / 4, "\n");
-        fflush(stdout);
-    }
+    print_table();
+    ext_table();
     exit(0);
 }
 
@@ -293,25 +260,3 @@ static void print_section(int number, const char *term) noexcept {
     assert(term);
     fprintf(stdout, "%3d %2X %03o %5s%s", number, number, number, ascii_lookup(number), term);
 }
-
-#if 0
-static int get_pivot(int argc, char **argv) noexcept {
-    int pivot = -1;
-
-    // find pivot...
-    auto re = std::regex(REG_PIVOT);
-    for (int i = 0; i < argc; i++) {
-        if (std::regex_match(argv[i], re)) {
-            pivot = i;
-            break;
-        }
-    }
-
-    if (pivot == -1) {
-        fprintf(stderr, "Missing PROGRAM\n");
-        exit(1);
-    }
-
-    return pivot;
-}
-#endif

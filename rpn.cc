@@ -26,6 +26,11 @@ typedef uint8_t Uint;
 #define FLOAT_LOG10(...) (Float)log10f(__VA_ARGS__)
 #define FLOAT_LOG(...) (Float)logf(__VA_ARGS__)
 #define FLOAT_ZERO 0
+#define MY_INTMAX INT8_MAX
+#define MY_UINTMAX UINT8_MAX
+#define MY_FLOATMAX INT8_MAX
+#define MY_FLOATMIN UINT8_MAX
+#define MY_BITMAX 7
 union FloatInfo { // on a Big Endian machine will need to convert to LE first
     Float f;
     struct {
@@ -59,6 +64,11 @@ typedef uint16_t Uint;
 #define FLOAT_LOG10(...) (Float)log10f(__VA_ARGS__)
 #define FLOAT_LOG(...) (Float)logf(__VA_ARGS__)
 #define FLOAT_ZERO 0
+#define MY_INTMAX INT16_MAX
+#define MY_UINTMAX UINT16_MAX
+#define MY_FLOATMAX INT16_MAX
+#define MY_FLOATMIN UINT16_MAX
+#define MY_BITMAX 15
 union FloatInfo { // on a Big Endian machine will need to convert to LE first
     Float f;
     struct {
@@ -91,6 +101,11 @@ typedef uint32_t Uint;
 #define FLOAT_LOG10(...) log10f(__VA_ARGS__)
 #define FLOAT_LOG(...) logf(__VA_ARGS__)
 #define FLOAT_ZERO 0.0f
+#define MY_INTMAX INT32_MAX
+#define MY_UINTMAX UINT32_MAX
+#define MY_FLOATMAX __FLT_MAX__
+#define MY_FLOATMIN __FLT_MIN__
+#define MY_BITMAX 31
 union FloatInfo { // on a Big Endian machine will need to convert to LE first
     Float f;
     struct {
@@ -104,14 +119,25 @@ union FloatInfo { // on a Big Endian machine will need to convert to LE first
 typedef double Float;
 typedef int64_t Int;
 typedef uint64_t Uint;
-#define FMT_FLOAT "%lf"
-#define FMT_INT "%li"
-#define FMT_UINT "%lu"
-#define FMT_HEX "%lX"
-#define FMT_OCT "%lo"
-#define FMT_LONG_FLOAT "%.20lf"
-#define FMT_LONG_HEX "%016lX"
-#define FMT_LONG_OCT "%022lo"
+#ifdef __APPLE__
+#  define FMT_FLOAT "%lf"
+#  define FMT_INT "%lli"
+#  define FMT_UINT "%llu"
+#  define FMT_HEX "%llX"
+#  define FMT_OCT "%llo"
+#  define FMT_LONG_FLOAT "%.20lf"
+#  define FMT_LONG_HEX "%016llX"
+#  define FMT_LONG_OCT "%022llo"
+#else
+#  define FMT_FLOAT "%lf"
+#  define FMT_INT "%li"
+#  define FMT_UINT "%lu"
+#  define FMT_HEX "%lX"
+#  define FMT_OCT "%lo"
+#  define FMT_LONG_FLOAT "%.20lf"
+#  define FMT_LONG_HEX "%016lX"
+#  define FMT_LONG_OCT "%022lo"
+#endif
 #define FLOAT_MOD(...) fmod(__VA_ARGS__)
 #define FLOAT_POW(...) pow(__VA_ARGS__)
 #define FLOAT_SQRT(...) sqrt(__VA_ARGS__)
@@ -123,6 +149,11 @@ typedef uint64_t Uint;
 #define FLOAT_LOG10(...) log10(__VA_ARGS__)
 #define FLOAT_LOG(...) log(__VA_ARGS__)
 #define FLOAT_ZERO 0.0
+#define MY_INTMAX INT64_MAX
+#define MY_UINTMAX UINT64_MAX
+#define MY_FLOATMAX __DBL_MAX__
+#define MY_FLOATMIN __DBL_MIN__
+#define MY_BITMAX 63
 union FloatInfo {
     Float f;
     struct {
@@ -265,6 +296,8 @@ static Value binop_cast(Value& lhs, Value& rhs) noexcept;
 static Value binop_pun(Value& lhs, Value& rhs) noexcept;
 static Value binop_gcd(Value& lhs, Value& rhs) noexcept;
 static Value binop_lcm(Value& lhs, Value& rhs) noexcept;
+static Value binop_ror(Value& lhs, Value& rhs) noexcept;
+static Value binop_rol(Value& lhs, Value& rhs) noexcept;
 
 static Value unop_not(Value& lhs) noexcept;
 static Value unop_inv(Value& lhs) noexcept;
@@ -316,6 +349,8 @@ static SymBinop binopTable[] = {
     binop_pun,
     binop_gcd,
     binop_lcm,
+    binop_ror,
+    binop_rol,
     NULL,
 };
 #endif
@@ -378,8 +413,10 @@ static struct {
     XENTRY(REG_OP_POW, binop_pow),
     XENTRY(REG_OP_SHL_SYM, binop_shl),
     XENTRY(REG_OP_SHL, binop_shl),
+    XENTRY(REG_OP_LSH, binop_shl),
     XENTRY(REG_OP_SHR_SYM, binop_shr),
     XENTRY(REG_OP_SHR, binop_shr),
+    XENTRY(REG_OP_RSH, binop_shr),
     XENTRY(REG_OP_EQ_SYM, binop_equ),
     XENTRY(REG_OP_EQ, binop_equ),
     XENTRY(REG_OP_NEQ_SYM, binop_neq),
@@ -401,6 +438,8 @@ static struct {
     XENTRY(REG_OP_SQRT, unop_sqrt),
     XENTRY(REG_OP_GCD, binop_gcd),
     XENTRY(REG_OP_LCM, binop_lcm),
+    XENTRY(REG_OP_ROR, binop_ror),
+    XENTRY(REG_OP_ROL, binop_rol),
     XENTRY(REG_OP_SIN, unop_sin),
     XENTRY(REG_OP_COS, unop_cos),
     XENTRY(REG_OP_TAN, unop_tan),
@@ -419,6 +458,25 @@ static struct {
     XENTRY(NULL, NULL),
 };
 #undef XENTRY
+
+static struct {
+    const char *name;
+    Value value;
+} constants[] = {
+    {"pi", Value((Float)M_PI)},
+    {"e", Value((Float)M_E)},
+    {"inf", Value((Float)INFINITY)},
+    {"-inf", Value((Float)-INFINITY)},
+    {"nan", Value((Float)NAN)},
+    {"true", Value((Int)1)},
+    {"false", Value((Int)0)},
+    {"intmax", Value((Int)MY_INTMAX)},
+    {"uintmax", Value((Uint)MY_UINTMAX)},
+    {"floatmax", Value((Float)MY_FLOATMAX)},
+    {"floatmin", Value((Float)MY_FLOATMIN)},
+    {"bitmax", Value((Int)MY_BITMAX)},
+    {NULL, Value()}
+};
 
 struct Rpn {
     std::stack<Value> stack;
@@ -495,32 +553,29 @@ void rpn_destroy(Rpn *self) noexcept {
 }
 
 void rpn_help() noexcept {
-    EPRINT("Operations can be binary or unary, following C-style convention\n");
-    EPRINT("Special operations are 'end' or 'sep' which print a newline or space\n");
-    EPRINT("Format is space-seperated RPN (Reverse Polish Notation)\n");
+    printf("Operations can be binary or unary, following C-style convention\n");
+    printf("Special operations are 'end' or 'sep' which print a newline or space\n");
+    printf("Format is space-seperated RPN (Reverse Polish Notation)\n");
     for (int i = 0; opLookup[i].name != NULL; i++) {
         if (i % 14 == 0) {
-            EPRINT("\n\t");
+            printf("\n\t");
         }
-        EPRINT("%s ", opLookup[i].name);
-        fflush(stderr);
+        printf("%s ", opLookup[i].name);
     }
-    EPRINT("\n\n");
+    printf("\n\n");
 
-    EPRINT("Types can be used as the rhs operand of 'as' or 'cast' operations\n\n\t");
+    printf("Types can be used as the rhs operand of 'as' or 'cast' operations\n\n\t");
     for (int i = 0; i < TYPE_COUNT; i++) {
-        EPRINT("%s ", typeTable[i]);
-        fflush(stderr);
+        printf("%s ", typeTable[i]);
     }
-    EPRINT("\n\n");
+    printf("\n\n");
 
-    EPRINT("Formats must be the rhs operand of 'as' operations\n\n\t");
+    printf("Formats must be the rhs operand of 'as' operations\n\n\t");
     for (int i = 0; i < FORMAT_COUNT; i++) {
-        EPRINT("%s ", formatTable[i]);
-        fflush(stderr);
+        printf("%s ", formatTable[i]);
     }
-    EPRINT("\n");
-    fflush(stderr);
+    printf("\n");
+    fflush(stdout);
 }
 
 static Node *node_new(char *value) noexcept {
@@ -555,17 +610,6 @@ static Node *node_new(char *value) noexcept {
         EPRINT("operation: <empty> does not exist\n");
         exit(1);
     }
-
-    static struct {
-        const char *name;
-        Value value;
-    } constants[] = {
-        {"pi", Value((Float)M_PI)},
-        {"e", Value((Float)M_E)},
-        {"inf", Value((Float)INFINITY)},
-        {"nan", Value((Float)NAN)},
-        {NULL, Value()}
-    };
 
     for (int i = 0; constants[i].name; i++) {
         if (strcasecmp(value, constants[i].name) == 0) {
@@ -734,12 +778,28 @@ static Value binop_mul(Value& lhs, Value& rhs) noexcept {
     return lhs.unexpected_type();
 }
 
+static void int_divbyzero(Int a, Int b) noexcept {
+    EPRINT("Integer divide by zero: " FMT_INT " / " FMT_INT "\n",
+        a, b);
+    exit(ERANGE);
+}
+
+static void uint_divbyzero(Uint a, Uint b) noexcept {
+    EPRINT("Uinteger divide by zero: " FMT_UINT " / " FMT_UINT "\n",
+        a, b);
+    exit(ERANGE);
+}
+
 static Value binop_div(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
     switch (lhs.type) {
     case TYPE_FLOAT: return Value((Float)(lhs.number.f / rhs.number.f));
-    case TYPE_INT:   return Value((Int)(lhs.number.i / rhs.number.i));
-    case TYPE_UINT:  return Value((Uint)(lhs.number.u / rhs.number.u));
+    case TYPE_INT:
+        if (rhs.number.i == 0) int_divbyzero(lhs.number.i, rhs.number.i);
+        return Value((Int)(lhs.number.i / rhs.number.i));
+    case TYPE_UINT:
+        if (rhs.number.u == 0) uint_divbyzero(lhs.number.u, rhs.number.u);
+        return Value((Uint)(lhs.number.u / rhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();
@@ -749,8 +809,12 @@ static Value binop_mod(Value& lhs, Value& rhs) noexcept {
     lhs.coerce(rhs);
     switch (lhs.type) {
     case TYPE_FLOAT: return Value((Float)FLOAT_MOD(lhs.number.f, rhs.number.f));
-    case TYPE_INT:   return Value((Int)(lhs.number.i % rhs.number.i));
-    case TYPE_UINT:  return Value((Uint)(lhs.number.u % rhs.number.u));
+    case TYPE_INT:
+        if (rhs.number.i == 0) int_divbyzero(lhs.number.i, rhs.number.i);
+        return Value((Int)(lhs.number.i % rhs.number.i));
+    case TYPE_UINT:
+        if (rhs.number.u == 0) uint_divbyzero(lhs.number.u, rhs.number.u);
+        return Value((Uint)(lhs.number.u % rhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();
@@ -1075,6 +1139,66 @@ static Value binop_lcm(Value& lhs, Value& rhs) noexcept {
     return lhs.unexpected_type();
 }
 
+static Uint ror1(Uint a) noexcept {
+    const Uint lsb = a & 0x1;
+    const Uint rest = a >> 1;
+    const Uint result = (lsb << MY_BITMAX) | rest;
+    return result;
+}
+
+static Uint ror(Uint a, Uint b) noexcept {
+    for (Uint copy = 0; copy < b; copy++) {
+        a = ror1(a);
+    }
+    return a;
+}
+
+static Uint rol1(Uint a) noexcept {
+    const Uint msb = a >> MY_BITMAX;
+    const Uint rest = a << 1;
+    const Uint result = rest | msb;
+    return result;
+}
+
+static Uint rol(Uint a, Uint b) noexcept {
+    for (Uint copy = 0; copy < b; copy++) {
+        a = rol1(a);
+    }
+    return a;
+}
+
+static Value binop_ror(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    switch (lhs.type) {
+    case TYPE_FLOAT:
+    {
+        Value tmp = Value(ror((Uint)lhs.number.u, (Uint)rhs.number.f));
+        tmp.pun(TYPE_FLOAT);
+        return tmp;
+    }
+    case TYPE_INT:   return Value((Int)ror(lhs.number.u, (Uint)rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)ror(lhs.number.u, rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_rol(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    switch (lhs.type) {
+    case TYPE_FLOAT:
+    {
+        Value tmp = Value(rol((Uint)lhs.number.u, (Uint)rhs.number.f));
+        tmp.pun(TYPE_FLOAT);
+        return tmp;
+    }
+    case TYPE_INT:   return Value((Int)rol(lhs.number.u, (Uint)rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)rol(lhs.number.u, rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
 static Value unop_not(Value& lhs) noexcept {
     switch (lhs.type) {
     case TYPE_FLOAT: return Value((Float)!lhs.number.u);
@@ -1269,9 +1393,9 @@ static Value unop_fsgn(Value &lhs) noexcept {
     FloatInfo fi;
     fi.f = lhs.number.f;
     switch (lhs.type) {
-    case TYPE_FLOAT: return Value((Float)(fi.parts.sign));
+    case TYPE_FLOAT: return Value((Int)(fi.parts.sign));
     case TYPE_INT:   return Value((Int)(fi.parts.sign));
-    case TYPE_UINT:  return Value((Uint)(fi.parts.sign));
+    case TYPE_UINT:  return Value((Int)(fi.parts.sign));
     default: break;
     }
     return lhs.unexpected_type();
@@ -1281,9 +1405,9 @@ static Value unop_fexp(Value &lhs) noexcept {
     FloatInfo fi;
     fi.f = lhs.number.f;
     switch (lhs.type) {
-    case TYPE_FLOAT: return Value((Float)(fi.parts.exponent));
+    case TYPE_FLOAT: return Value((Int)(fi.parts.exponent));
     case TYPE_INT:   return Value((Int)(fi.parts.exponent));
-    case TYPE_UINT:  return Value((Uint)(fi.parts.exponent));
+    case TYPE_UINT:  return Value((Int)(fi.parts.exponent));
     default: break;
     }
     return lhs.unexpected_type();
@@ -1293,9 +1417,9 @@ static Value unop_fmant(Value &lhs) noexcept {
     FloatInfo fi;
     fi.f = lhs.number.f;
     switch (lhs.type) {
-    case TYPE_FLOAT: return Value((Float)(fi.parts.mantissa));
+    case TYPE_FLOAT: return Value((Int)(fi.parts.mantissa));
     case TYPE_INT:   return Value((Int)(fi.parts.mantissa));
-    case TYPE_UINT:  return Value((Uint)(fi.parts.mantissa));
+    case TYPE_UINT:  return Value((Int)(fi.parts.mantissa));
     default: break;
     }
     return lhs.unexpected_type();
@@ -1603,3 +1727,8 @@ Value Value::unexpected_type(void) noexcept {
 #undef FLOAT_LOG10
 #undef FLOAT_LOG
 #undef FLOAT_ZERO
+#undef MY_INTMAX
+#undef MY_UINTMAX
+#undef MY_FLOATMAX
+#undef MY_FLOATMIN
+#undef MY_BITMAX

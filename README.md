@@ -1,15 +1,10 @@
 # HD - HexaDecimal
 Run `hd --help` to see options. Note most operators have a symbol version which is also usable to avoid needing to escape `;` for example, in the terminal.
-
-Note `requirements.txt` must be installed to use the `hexadecimal` tool. The `hd` tool alone doesn't require these dependencies however:
-```bash
-cat requirements.txt | xargs python3 -m pip install
 ```
-
 ## Building
 ```bash
 # installation
-make
+make release -j4
 sudo make install
 
 # uninstallation
@@ -103,14 +98,5 @@ $ hd a ord 1 add chr as
 b
 ```
 
-## Programs
-* `hd` a Reverse Polish Notation calculator
-* `hexa.py` an Infix to Postfix converter
-* `hexadecimal` combines `hexa.py` and `hd` into a single program
-
 ## TODO
 * Allow underscores to make it easier to enter and display
-* Eliminate undefined or unexpected behavior in rpn program
-* Pivot point can't find negative numbers. Only works with `--rpn`
-* `./hd -v 0 -1 abs` should work, but it also thinks this is a binary op error. Only works with `--rpn`
-* `$ ./hd -r nan fexp hex as` gives `0x409FFC0000000000` for some reason?
