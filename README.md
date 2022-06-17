@@ -1,7 +1,8 @@
 # HD - HexaDecimal
 Run `hd --help` to see options. Note most operators have a symbol version which is also usable to avoid needing to escape `;` for example, in the terminal.
-```
+
 ## Building
+```
 ```bash
 # installation
 make release -j4
