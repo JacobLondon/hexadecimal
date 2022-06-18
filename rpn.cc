@@ -8,6 +8,7 @@
 #define Float Int
 typedef int8_t Int;
 typedef uint8_t Uint;
+// windows complains but whatever it still works
 #define FMT_FLOAT "%hhi"
 #define FMT_INT "%hhi"
 #define FMT_UINT "%hhu"
@@ -15,6 +16,7 @@ typedef uint8_t Uint;
 #define FMT_OCT "%hho"
 #define FMT_LONG_HEX "%02hhX"
 #define FMT_LONG_OCT "%03hho"
+
 #define FLOAT_MOD(a, b) (a % b)
 #define FLOAT_POW(a, b) (Float)int_pow(a, b)
 #define FLOAT_SQRT(...) (Float)sqrtf(__VA_ARGS__)
@@ -128,6 +130,15 @@ typedef uint64_t Uint;
 #  define FMT_LONG_FLOAT "%.20lf"
 #  define FMT_LONG_HEX "%016llX"
 #  define FMT_LONG_OCT "%022llo"
+#elif defined(WIN32) || defined(_WIN32)
+#  define FMT_FLOAT "%lf"
+#  define FMT_INT "%I64i"
+#  define FMT_UINT "%I64u"
+#  define FMT_HEX "%I64X"
+#  define FMT_OCT "%I64o"
+#  define FMT_LONG_FLOAT "%.20lf"
+#  define FMT_LONG_HEX "%016I64X"
+#  define FMT_LONG_OCT "%022I64o"
 #else
 #  define FMT_FLOAT "%lf"
 #  define FMT_INT "%li"

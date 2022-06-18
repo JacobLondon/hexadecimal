@@ -13,6 +13,7 @@ found = False
 ifeq ($(OS),Windows_NT)
 	found = True
 	UNAME_S = Windows
+	CXXFLAGS += -Wno-cast-function-type
 else
 	UNAME_S = $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
