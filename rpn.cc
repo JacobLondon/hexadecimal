@@ -564,14 +564,19 @@ void rpn_destroy(Rpn *self) noexcept {
 }
 
 void rpn_help() noexcept {
+    size_t len;
     printf("Operations can be binary or unary, following C-style convention\n");
     printf("Special operations are 'end' or 'sep' which print a newline or space\n");
-    printf("Format is space-seperated RPN (Reverse Polish Notation)\n");
+
+    printf("Format is space-seperated RPN (Reverse Polish Notation)\n\n\t");
+    len = 0;
     for (int i = 0; opLookup[i].name != NULL; i++) {
-        if (i % 14 == 0) {
+        if (len > 60) {
             printf("\n\t");
+            len = 0;
         }
         printf("%s ", opLookup[i].name);
+        len += strlen(opLookup[i].name) + 1;
     }
     printf("\n\n");
 
@@ -585,7 +590,20 @@ void rpn_help() noexcept {
     for (int i = 0; i < FORMAT_COUNT; i++) {
         printf("%s ", formatTable[i]);
     }
+    printf("\n\n");
+
+    printf("Constants consist of\n\n\t");
+    len = 0;
+    for (int i = 0; constants[i].name != NULL; i++) {
+        if (len > 60) {
+            printf("\n\t");
+            len = 0;
+        }
+        printf("%s ", constants[i].name);
+        len += strlen(constants[i].name) + 1;
+    }
     printf("\n");
+
     fflush(stdout);
 }
 
