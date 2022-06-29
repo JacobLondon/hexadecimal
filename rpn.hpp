@@ -39,6 +39,7 @@
 
 #define REG_OP_EQ_SYM "=="
 #define REG_OP_EQ "eq"
+#define REG_OP_EQU "equ"
 #define REG_OP_NEQ_SYM "!="
 #define REG_OP_NEQ "neq"
 #define REG_OP_GTE_SYM ">="
@@ -66,6 +67,7 @@
 #define REG_OP_NOT "not"
 #define REG_OP_INV_SYM "~"
 #define REG_OP_INV "inv"
+#define REG_OP_INVERSE "inverse" // power of -1
 
 #define REG_OP_GT_SYM ">"
 #define REG_OP_GT "gt"
@@ -97,6 +99,10 @@
 #define REG_OP_FSGN "fsgn"
 #define REG_OP_FEXP "fexp"
 #define REG_OP_FMANT "fmantissa"
+
+#define REG_OP_FACTORIAL "fact"
+#define REG_OP_NCR "ncr"
+#define REG_OP_NPR "npr"
 
 struct RpnVtable {
     void *(* create)() noexcept;

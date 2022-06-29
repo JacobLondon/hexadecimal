@@ -314,6 +314,8 @@ static Value binop_gcd(Value& lhs, Value& rhs) noexcept;
 static Value binop_lcm(Value& lhs, Value& rhs) noexcept;
 static Value binop_ror(Value& lhs, Value& rhs) noexcept;
 static Value binop_rol(Value& lhs, Value& rhs) noexcept;
+static Value binop_ncr(Value& lhs, Value& rhs) noexcept;
+static Value binop_npr(Value& lhs, Value& rhs) noexcept;
 
 static Value unop_not(Value& lhs) noexcept;
 static Value unop_inv(Value& lhs) noexcept;
@@ -335,6 +337,9 @@ static Value unop_info(Value &lhs) noexcept;
 static Value unop_fsgn(Value &lhs) noexcept;
 static Value unop_fexp(Value &lhs) noexcept;
 static Value unop_fmant(Value &lhs) noexcept;
+static Value unop_factorial(Value &lhs) noexcept;
+static Value unop_inverse(Value &lhs) noexcept;
+
 static bool op_isunary(SymOp op) noexcept;
 //static bool op_isbinary(SymOp op) noexcept;
 
@@ -392,6 +397,8 @@ static SymUnop unopTable[] = {
     unop_fsgn,
     unop_fexp,
     unop_fmant,
+    unop_factorial,
+    unop_inverse,
     NULL,
 };
 
@@ -435,6 +442,7 @@ static struct {
     XENTRY(REG_OP_RSH, binop_shr),
     XENTRY(REG_OP_EQ_SYM, binop_equ),
     XENTRY(REG_OP_EQ, binop_equ),
+    XENTRY(REG_OP_EQU, binop_equ),
     XENTRY(REG_OP_NEQ_SYM, binop_neq),
     XENTRY(REG_OP_NEQ, binop_neq),
     XENTRY(REG_OP_GT_SYM, binop_gt),
@@ -471,6 +479,10 @@ static struct {
     XENTRY(REG_OP_FSGN, unop_fsgn),
     XENTRY(REG_OP_FEXP, unop_fexp),
     XENTRY(REG_OP_FMANT, unop_fmant),
+    XENTRY(REG_OP_FACTORIAL, unop_factorial),
+    XENTRY(REG_OP_INVERSE, unop_inverse),
+    XENTRY(REG_OP_NCR, binop_ncr),
+    XENTRY(REG_OP_NPR, binop_npr),
     XENTRY(NULL, NULL),
 };
 #undef XENTRY
@@ -1214,6 +1226,99 @@ static Value binop_rol(Value& lhs, Value& rhs) noexcept {
     return lhs.unexpected_type();
 }
 
+#define FACTORIAL_CHK(out, value, check) \
+do { \
+    if (check) { \
+        EPRINT("factorial: value must be nonnegative\n"); \
+        exit(1); \
+    } \
+    decltype(out) my__tmp = 1; \
+    for (size_t i = 2; i <= (size_t)(value); i++) { \
+        my__tmp *= i; \
+    } \
+    out = my__tmp; \
+} while (0)
+
+#define FACTORIAL(out, value) FACTORIAL_CHK(out, value, (value < 0))
+#define FACTORIAL_NO(out, value) FACTORIAL_CHK(out, value, false)
+
+#define NCR_CHK(out, n, r, check, FACT) \
+do { \
+    if (check) { \
+        EPRINT("ncr: requires n >= r >= 0\n"); \
+        exit(1); \
+    } \
+    decltype(out) f__n, f__r, f__nr; \
+    FACT(f__n, n); \
+    FACT(f__r, r); \
+    FACT(f__nr, n - r); \
+    out = f__n / (f__r * f__nr); \
+} while (0)
+
+#define NCR(out, n, r) NCR_CHK(out, n, r, (r < 0) || (n < r), FACTORIAL)
+#define NCR_NO(out, n, r) NCR_CHK(out, n, r, (n < r), FACTORIAL_NO)
+
+#define NPR_CHK(out, n, r, check, FACT) \
+do { \
+    if (check) { \
+        EPRINT("npr: requires n >= r >= 0\n"); \
+        exit(1); \
+    } \
+    decltype(out) f__n, f__nr; \
+    FACT(f__n, n); \
+    FACT(f__nr, n - r); \
+    out = f__n / f__nr; \
+} while (0)
+
+#define NPR(out, n, r) NPR_CHK(out, n, r, (r < 0) || (n < r), FACTORIAL)
+#define NPR_NO(out, n, r) NPR_CHK(out, n, r, (n < r), FACTORIAL_NO)
+
+static Value binop_ncr(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    switch (lhs.type) {
+    case TYPE_FLOAT: {
+        Float result;
+        NCR(result, lhs.number.f, rhs.number.f);
+        return Value(result);
+    }
+    case TYPE_INT: {
+        Int result;
+        NCR(result, lhs.number.i, rhs.number.i);
+        return Value(result);
+    }
+    case TYPE_UINT: {
+        Uint result;
+        NCR_NO(result, lhs.number.u, rhs.number.u);
+        return Value(result);
+    }
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_npr(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    switch (lhs.type) {
+    case TYPE_FLOAT: {
+        Float result;
+        NPR(result, lhs.number.f, rhs.number.f);
+        return Value(result);
+    }
+    case TYPE_INT: {
+        Int result;
+        NPR(result, lhs.number.i, rhs.number.i);
+        return Value(result);
+    }
+    case TYPE_UINT: {
+        Uint result;
+        NPR_NO(result, lhs.number.u, rhs.number.u);
+        return Value(result);
+    }
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
 static Value unop_not(Value& lhs) noexcept {
     switch (lhs.type) {
     case TYPE_FLOAT: return Value((Float)!lhs.number.u);
@@ -1443,6 +1548,38 @@ static Value unop_fmant(Value &lhs) noexcept {
     case TYPE_FLOAT: return Value((Int)(fi.parts.mantissa));
     case TYPE_INT:   return Value((Int)(fi.parts.mantissa));
     case TYPE_UINT:  return Value((Int)(fi.parts.mantissa));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_factorial(Value &lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: {
+        Float result;
+        FACTORIAL(result, lhs.number.f);
+        return Value(result);
+    }
+    case TYPE_INT: {
+        Int result;
+        FACTORIAL(result, lhs.number.i);
+        return Value(result);
+    }
+    case TYPE_UINT: {
+        Uint result;
+        FACTORIAL_CHK(result, lhs.number.u, false);
+        return Value(result);
+    }
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_inverse(Value &lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_POW(lhs.number.f, (Float)-1));
+    case TYPE_INT:   return Value((Float)FLOAT_POW((Float)lhs.number.i, (Float)-1));
+    case TYPE_UINT:  return Value((Float)FLOAT_POW((Float)lhs.number.u, (Float)-1));
     default: break;
     }
     return lhs.unexpected_type();
