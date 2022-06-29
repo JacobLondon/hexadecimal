@@ -176,13 +176,6 @@ union FloatInfo {
 #endif
 #define FMT_STRING "%s"
 
-#define EPRINT(...) \
-    do { \
-        if (_verbose) { \
-            fprintf(stderr, __VA_ARGS__); \
-        } \
-    } while (0)
-
 // order of precedence, lowest to highest
 enum Type {
     TYPE_INT,
@@ -509,6 +502,8 @@ Rpn::~Rpn() noexcept {
     for (Node *n : this->nodes) {
         node_free(n);
     }
+
+    regex_cleanup();
 }
 
 void Rpn::exec() noexcept {
@@ -533,6 +528,8 @@ Rpn *rpn_create() noexcept {
         EPRINT("Out of memory\n");
         exit(ENOMEM);
     }
+
+    regex_init();
     return self;
 }
 
@@ -610,31 +607,6 @@ void rpn_help() noexcept {
 static Node *node_new(char *value) noexcept {
     assert(value);
 
-    // this isn't a memory leak, it will be collected
-    static std::regex *uReg = NULL;
-    static std::regex *iReg = NULL;
-    static std::regex *fReg = NULL;
-    static std::regex *bReg = NULL;
-    static std::regex *oReg = NULL;
-    static std::regex *hReg = NULL;
-
-    #define REG_INIT(RegP, Regexp) do { \
-        if (!RegP) { \
-            RegP = new (std::nothrow) std::regex(Regexp); \
-            if (!RegP) { \
-                EPRINT("Out of memory\n"); \
-                exit(ENOMEM); \
-            } \
-        } \
-    } while (0)
-
-    REG_INIT(uReg, REG_UNSIGNED);
-    REG_INIT(iReg, REG_SIGNED);
-    REG_INIT(fReg, REG_FLOAT);
-    REG_INIT(bReg, REG_BIN);
-    REG_INIT(oReg, REG_OCT);
-    REG_INIT(hReg, REG_HEX);
-
     if (value[0] == 0) {
         EPRINT("operation: <empty> does not exist\n");
         exit(1);
@@ -647,7 +619,7 @@ static Node *node_new(char *value) noexcept {
     }
 
     // floating point
-    if (std::regex_match(value, *fReg)) {
+    if (std::regex_match(value, *regex_float)) {
         Float number;
         if (sscanf(value, FMT_FLOAT, &number) == 1) {
             return (Node *) new (std::nothrow) NumNode(Value(number));
@@ -655,7 +627,7 @@ static Node *node_new(char *value) noexcept {
     }
 
     // signed
-    else if (std::regex_match(value, *iReg)) {
+    else if (std::regex_match(value, *regex_signed)) {
         Int number;
         if (sscanf(value, FMT_INT, &number) == 1) {
             Value tmp = Value(number);
@@ -664,7 +636,7 @@ static Node *node_new(char *value) noexcept {
         }
     }
     // unsigned
-    else if (std::regex_match(value, *uReg)) {
+    else if (std::regex_match(value, *regex_unsigned)) {
         Uint number;
         if (sscanf(value, FMT_UINT, &number) == 1) {
             Value tmp = Value(number);
@@ -673,7 +645,7 @@ static Node *node_new(char *value) noexcept {
         }
     }
     // hexadecimal
-    else if (std::regex_match(value, *hReg)) {
+    else if (std::regex_match(value, *regex_hexadecimal)) {
         Uint number;
         if (sscanf(&value[2], FMT_HEX, &number) == 1) {
             Value tmp = Value(number);
@@ -681,7 +653,7 @@ static Node *node_new(char *value) noexcept {
         }
     }
     // octal
-    else if (std::regex_match(value, *oReg)) {
+    else if (std::regex_match(value, *regex_octal)) {
         Uint number;
         if (sscanf(&value[2], FMT_OCT, &number) == 1) {
             Value tmp = Value(number);
@@ -689,7 +661,7 @@ static Node *node_new(char *value) noexcept {
         }
     }
     // binary
-    else if (std::regex_match(value, *bReg)) {
+    else if (std::regex_match(value, *regex_binary)) {
         Uint number;
         if (conve_binary(&value[2], &number)) {
             Value tmp = Value(number);
