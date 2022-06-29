@@ -513,6 +513,7 @@ void Rpn::exec() noexcept {
 }
 
 void Rpn::push(char *value) noexcept {
+    assert(value);
     Node *n = node_new(value);
     if (!n) {
         EPRINT("Out of memory\n");
@@ -1327,11 +1328,19 @@ static Value unop_round(Value& lhs) noexcept {
 }
 
 static Value unop_ord(Value &lhs) noexcept {
+    char buf[512];
     switch (lhs.type) {
-    case TYPE_FLOAT: return lhs.unexpected_type();
-    case TYPE_INT:   return lhs.unexpected_type();
-    case TYPE_UINT:  return lhs.unexpected_type();
-    case TYPE_STRING: return Value((Int)lhs.number.s[0]); // ascii only :/
+    case TYPE_FLOAT:
+        snprintf(buf, sizeof(buf), FMT_FLOAT, lhs.number.f);
+        return Value((Int)buf[0]);
+    case TYPE_INT:
+        snprintf(buf, sizeof(buf), FMT_INT, lhs.number.i);
+        return Value((Int)buf[0]);
+    case TYPE_UINT:
+        snprintf(buf, sizeof(buf), FMT_UINT, lhs.number.u);
+        return Value((Int)buf[0]);
+    case TYPE_STRING:
+        return Value((Int)lhs.number.s[0]); // ascii only :/
     default: break;
     }
     return lhs.unexpected_type();
@@ -1451,6 +1460,7 @@ Value::Value(const char *value) noexcept :
     type{TYPE_STRING},
     fmt{FORMAT_DEC}
 {
+    assert(value);
     number.s = value;
 }
 
