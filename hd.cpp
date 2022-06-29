@@ -28,6 +28,7 @@ static void func_ord(int argc, char **argv) noexcept;
 static void func_chr(int argc, char **argv) noexcept;
 static void func_long(int argc, char **argv) noexcept;
 static void func_verbose(int argc, char **argv) noexcept;
+static void func_endian(int argc, char **argv) noexcept;
 static void func_table(int argc, char **argv) noexcept;
 static void func_extable(int argc, char **argv) noexcept;
 static int arg_check(int argc, char **argv, const char *da, const char *ddarg) noexcept;
@@ -58,6 +59,7 @@ static struct {
     XENTRY("-t", "--table", func_table, "Get the ASCII table and exit"),
     XENTRY("-e", "--extable", func_extable, "Get the ASCII table and its extended set and exit"),
     XENTRY("-q", "--quiet", func_verbose, "Don't print errors to stderr"),
+    XENTRY(NULL, "--endianness", func_endian, "Display the endianness of the system to stdout"),
     XENTRY("-h", "--help", func_help, "View this help and exit"),
     XENTRY(NULL, NULL, NULL, NULL)
 };
@@ -197,6 +199,19 @@ static void func_long(int argc, char **argv) noexcept {
     (void)argc;
     (void)argv;
     _longform = true;
+}
+
+static void func_endian(int argc, char **argv) noexcept {
+    (void)argc;
+    (void)argv;
+    if (is_little_endian()) {
+        printf("little\n");
+    }
+    else {
+        printf("big\n");
+    }
+    fflush(stdout);
+    exit(0);
 }
 
 static void print_table(void) noexcept {
