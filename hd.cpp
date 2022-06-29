@@ -89,6 +89,8 @@ int main(int argc, char **argv)
 }
 
 static void func_rpn(int argc, char **argv) noexcept {
+    regex_init();
+
     int pivot = 1; // always 1 after '-r / --rpn' arg
     void *calc = rpn->create();
 
@@ -99,6 +101,7 @@ static void func_rpn(int argc, char **argv) noexcept {
     rpn->exec(calc);
     rpn->print(calc);
     rpn->destroy(calc);
+    regex_cleanup();
     exit(0);
 }
 

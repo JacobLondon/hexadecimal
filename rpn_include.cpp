@@ -25,7 +25,7 @@ void regex_init(void)
         if (!RegP) { \
             RegP = new (std::nothrow) std::regex(Regexp); \
             if (!RegP) { \
-                EPRINT("Out of memory\n"); \
+                EPRINT("regex: out of memory\n"); \
                 exit(ENOMEM); \
             } \
         } \
@@ -57,6 +57,17 @@ void regex_cleanup(void)
     XCLEANUP(regex_hexadecimal);
 
 #undef XCLEANUP
+}
+
+bool regex_is_initialized(void)
+{
+    return
+        regex_unsigned &&
+        regex_signed &&
+        regex_float &&
+        regex_binary &&
+        regex_octal &&
+        regex_hexadecimal;
 }
 
 /**

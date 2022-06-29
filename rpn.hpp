@@ -170,6 +170,10 @@ void rpn_help() noexcept;
 
 }
 
+void regex_init(void);
+void regex_cleanup(void);
+bool regex_is_initialized(void);
+
 extern bool _verbose;
 extern bool _longform;
 

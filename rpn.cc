@@ -523,14 +523,13 @@ Rpn::Rpn() noexcept :
     stack{},
     nodes{}
 {
+    assert(regex_is_initialized());
 }
 
 Rpn::~Rpn() noexcept {
     for (Node *n : this->nodes) {
         node_free(n);
     }
-
-    regex_cleanup();
 }
 
 void Rpn::exec() noexcept {
@@ -543,7 +542,7 @@ void Rpn::push(char *value) noexcept {
     assert(value);
     Node *n = node_new(value);
     if (!n) {
-        EPRINT("Out of memory\n");
+        EPRINT("stack: out of memory\n");
         exit(ENOMEM);
     }
     this->nodes.push_back(n);
@@ -553,11 +552,10 @@ void Rpn::push(char *value) noexcept {
 Rpn *rpn_create() noexcept {
     Rpn *self = new (std::nothrow) Rpn{};
     if (!self) {
-        EPRINT("Out of memory\n");
+        EPRINT("rpn: out of memory\n");
         exit(ENOMEM);
     }
 
-    regex_init();
     return self;
 }
 
@@ -723,7 +721,7 @@ SymNode::SymNode(SymOp op) noexcept :
 
 void SymNode::exec(std::stack<Value>& stack) noexcept {
     if (stack.size() < 1) {
-        EPRINT("Stack empty\n");
+        EPRINT("exec: stack empty\n");
         exit(1);
     }
 
