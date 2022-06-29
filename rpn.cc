@@ -33,6 +33,9 @@ typedef uint8_t Uint;
 #define MY_FLOATMAX INT8_MAX
 #define MY_FLOATMIN UINT8_MAX
 #define MY_BITMAX 7
+#define MY_FMANTMASK 0x7
+#define MY_FEXPMASK 0xF
+#define MY_FEXPBIT 3
 union FloatInfo { // on a Big Endian machine will need to convert to LE first
     Float f;
     struct {
@@ -71,6 +74,9 @@ typedef uint16_t Uint;
 #define MY_FLOATMAX INT16_MAX
 #define MY_FLOATMIN UINT16_MAX
 #define MY_BITMAX 15
+#define MY_FMANTMASK 0x3FF
+#define MY_FEXPMASK 0x1F
+#define MY_FEXPBIT 10
 union FloatInfo { // on a Big Endian machine will need to convert to LE first
     Float f;
     struct {
@@ -108,6 +114,9 @@ typedef uint32_t Uint;
 #define MY_FLOATMAX __FLT_MAX__
 #define MY_FLOATMIN __FLT_MIN__
 #define MY_BITMAX 31
+#define MY_FMANTMASK 0x7FFFFF
+#define MY_FEXPMASK 0xFF
+#define MY_FEXPBIT 23
 union FloatInfo { // on a Big Endian machine will need to convert to LE first
     Float f;
     struct {
@@ -165,6 +174,9 @@ typedef uint64_t Uint;
 #define MY_FLOATMAX __DBL_MAX__
 #define MY_FLOATMIN __DBL_MIN__
 #define MY_BITMAX 63
+#define MY_FMANTMASK 0xFFFFFFFFFFFFF
+#define MY_FEXPMASK 0x7FF
+#define MY_FEXPBIT 52
 union FloatInfo {
     Float f;
     struct {
@@ -479,6 +491,9 @@ static struct {
     {"floatmax", Value((Float)MY_FLOATMAX)},
     {"floatmin", Value((Float)MY_FLOATMIN)},
     {"bitmax", Value((Int)MY_BITMAX)},
+    {"fmantmask", Value((Int)MY_FMANTMASK)},
+    {"fexpmask", Value((Int)MY_FEXPMASK)},
+    {"fexpbit", Value((Int)MY_FEXPBIT)},
     {NULL, Value()}
 };
 
@@ -1741,3 +1756,6 @@ Value Value::unexpected_type(void) noexcept {
 #undef MY_FLOATMAX
 #undef MY_FLOATMIN
 #undef MY_BITMAX
+#undef MY_FMANTMASK
+#undef MY_FEXPMASK
+#undef MY_FEXPBIT

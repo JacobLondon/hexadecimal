@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 {
     int pivot = 0;
     if (argc <= 1) {
-        func_help(1, NULL);
+        func_help(-1, NULL);
         exit(1);
     }
 
@@ -124,7 +124,7 @@ static void func_help(int argc, char **argv) noexcept {
     rpn->help();
     fprintf(stderr, "\n");
 
-    if (argc == 1) {
+    if (argc == -1) {
         exit(1);
     }
     exit(0);
