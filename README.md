@@ -75,7 +75,7 @@ $ hd 10.0 info
 10
 
 # Constants 'pi e nan inf' are supported
-$ hd pi sep e sep nan sep inf sep inf -1 mul
+$ hd pi sep %e sep nan sep inf sep -inf
 3.14159 2.71828 nan inf -inf
 
 # get the ASCII table
@@ -96,8 +96,15 @@ $ hd a ord 1 add
 98
 $ hd a ord 1 add chr as
 b
+
+$ hd --endianness
+little
 ```
 
 ## TODO
 * Allow underscores to make it easier to enter and display
 * Support different formats for numbers
+* Add variables to the variable list during runtime
+* atan, tanh, atanh and the like
+* min/max functions
+* quiet sep equivalent that doesn't print
