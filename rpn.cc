@@ -213,6 +213,7 @@ enum Format {
     FORMAT_BIG,
     FORMAT_LITTLE,
     FORMAT_CHAR,
+    FORMAT_TYPE,
     FORMAT_COUNT
 };
 
@@ -224,6 +225,7 @@ static const char *formatTable[] = {
     "big", // endianness
     "little",
     "chr",
+    "type",
     "",
 };
 
@@ -492,7 +494,7 @@ static struct {
     Value value;
 } constants[] = {
     {"pi", Value((Float)M_PI)},
-    {"e", Value((Float)M_E)},
+    {"%e", Value((Float)M_E)},
     {"inf", Value((Float)INFINITY)},
     {"-inf", Value((Float)-INFINITY)},
     {"nan", Value((Float)NAN)},
@@ -1711,6 +1713,9 @@ static void do_print(Value& v, const char *end) noexcept {
             fprintf(stdout, "%s%s", ascii_lookup(v.number.u), end);
             break;
         }
+        break;
+    case FORMAT_TYPE:
+        fprintf(stdout, "%s%s", typeTable[v.type], end);
         break;
     default:
         assert(0);
