@@ -113,5 +113,3 @@ $ hd 10 my_ten save 1 add
 * Allow underscores to make it easier to enter and display
 * Support different formats for numbers
 * atan, tanh, atanh and the like
-* min/max functions
-* quiet sep equivalent that doesn't print

@@ -196,6 +196,9 @@ union FloatInfo {
 #endif
 #define FMT_STRING "%s"
 
+#define MYMAX(a, b) ((a > b) ? (a) : (b))
+#define MYMIN(a, b) ((a < b) ? (a) : (b))
+
 // order of precedence, lowest to highest
 enum Type {
     TYPE_INT,
@@ -327,6 +330,8 @@ static Value binop_rol(Value& lhs, Value& rhs) noexcept;
 static Value binop_ncr(Value& lhs, Value& rhs) noexcept;
 static Value binop_npr(Value& lhs, Value& rhs) noexcept;
 static Value binop_save(Value& val, Value& name) noexcept;
+static Value binop_max(Value& lhs, Value& rhs) noexcept;
+static Value binop_min(Value& lhs, Value& rhs) noexcept;
 
 static Value unop_not(Value& lhs) noexcept;
 static Value unop_inv(Value& lhs) noexcept;
@@ -504,6 +509,8 @@ static struct {
     XENTRY(REG_OP_NCR, binop_ncr),
     XENTRY(REG_OP_NPR, binop_npr),
     XENTRY(REG_OP_SAVE, binop_save),
+    XENTRY(REG_OP_MAX, binop_max),
+    XENTRY(REG_OP_MIN, binop_min),
     XENTRY(NULL, NULL),
 };
 #undef XENTRY
@@ -1387,6 +1394,28 @@ static Value binop_save(Value& val, Value& name) noexcept {
 
     constant_save(name.number.s, val);
     return val;
+}
+
+static Value binop_max(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)MYMAX(lhs.number.f, rhs.number.f));
+    case TYPE_INT:   return Value((Int)MYMAX(lhs.number.i, rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)MYMAX(lhs.number.u, rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_min(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)MYMIN(lhs.number.f, rhs.number.f));
+    case TYPE_INT:   return Value((Int)MYMIN(lhs.number.i, rhs.number.i));
+    case TYPE_UINT:  return Value((Uint)MYMIN(lhs.number.u, rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
 }
 
 static Value unop_not(Value& lhs) noexcept {

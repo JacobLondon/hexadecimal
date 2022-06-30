@@ -68,6 +68,8 @@
 #define REG_OP_INV_SYM "~"
 #define REG_OP_INV "inv"
 #define REG_OP_INVERSE "inverse" // power of -1
+#define REG_OP_MIN "min"
+#define REG_OP_MAX "max"
 
 #define REG_OP_GT_SYM ">"
 #define REG_OP_GT "gt"
