@@ -91,6 +91,8 @@
 #define REG_OP_SGN "sgn"
 #define REG_OP_FLOOR "floor"
 #define REG_OP_ROUND "round"
+#define REG_OP_CEIL "ceil"
+#define REG_OP_TRUNC "trunc"
 //#define REG_OP_CHR "chr"
 #define REG_OP_ORD "ord"
 #define REG_OP_LN "ln"

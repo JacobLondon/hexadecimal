@@ -25,6 +25,8 @@ typedef uint8_t Uint;
 #define FLOAT_TAN(...) (Float)tanf(__VA_ARGS__)
 #define FLOAT_FLOOR(...) (Float)floorf(__VA_ARGS__)
 #define FLOAT_ROUND(...) (Float)roundf(__VA_ARGS__)
+#define FLOAT_CEIL(...) (Float)ceilf(__VA_ARGS__)
+#define FLOAT_TRUNC(...) (Float)truncf(__VA_ARGS__)
 #define FLOAT_LOG10(...) (Float)log10f(__VA_ARGS__)
 #define FLOAT_LOG(...) (Float)logf(__VA_ARGS__)
 #define FLOAT_ZERO 0
@@ -66,6 +68,8 @@ typedef uint16_t Uint;
 #define FLOAT_TAN(...) (Float)tanf(__VA_ARGS__)
 #define FLOAT_FLOOR(...) (Float)floorf(__VA_ARGS__)
 #define FLOAT_ROUND(...) (Float)roundf(__VA_ARGS__)
+#define FLOAT_CEIL(...) (Float)ceilf(__VA_ARGS__)
+#define FLOAT_TRUNC(...) (Float)truncf(__VA_ARGS__)
 #define FLOAT_LOG10(...) (Float)log10f(__VA_ARGS__)
 #define FLOAT_LOG(...) (Float)logf(__VA_ARGS__)
 #define FLOAT_ZERO 0
@@ -105,6 +109,8 @@ typedef uint32_t Uint;
 #define FLOAT_COS(...) cosf(__VA_ARGS__)
 #define FLOAT_TAN(...) tanf(__VA_ARGS__)
 #define FLOAT_FLOOR(...) floorf(__VA_ARGS__)
+#define FLOAT_CEIL(...) (Float)ceilf(__VA_ARGS__)
+#define FLOAT_TRUNC(...) (Float)truncf(__VA_ARGS__)
 #define FLOAT_ROUND(...) roundf(__VA_ARGS__)
 #define FLOAT_LOG10(...) log10f(__VA_ARGS__)
 #define FLOAT_LOG(...) logf(__VA_ARGS__)
@@ -165,6 +171,8 @@ typedef uint64_t Uint;
 #define FLOAT_COS(...) cos(__VA_ARGS__)
 #define FLOAT_TAN(...) tan(__VA_ARGS__)
 #define FLOAT_FLOOR(...) floor(__VA_ARGS__)
+#define FLOAT_CEIL(...) (Float)ceil(__VA_ARGS__)
+#define FLOAT_TRUNC(...) (Float)trunc(__VA_ARGS__)
 #define FLOAT_ROUND(...) round(__VA_ARGS__)
 #define FLOAT_LOG10(...) log10(__VA_ARGS__)
 #define FLOAT_LOG(...) log(__VA_ARGS__)
@@ -331,6 +339,8 @@ static Value unop_abs(Value& lhs) noexcept;
 static Value unop_sgn(Value& lhs) noexcept;
 static Value unop_floor(Value& lhs) noexcept;
 static Value unop_round(Value& lhs) noexcept;
+static Value unop_ceil(Value& lhs) noexcept;
+static Value unop_trunc(Value& lhs) noexcept;
 static Value unop_ord(Value &lhs) noexcept;
 //static Value unop_chr(Value &lhs) noexcept;
 static Value unop_ln(Value &lhs) noexcept;
@@ -391,6 +401,8 @@ static SymUnop unopTable[] = {
     unop_sgn,
     unop_floor,
     unop_round,
+    unop_ceil,
+    unop_trunc,
     unop_ord,
     //unop_chr,
     unop_ln,
@@ -473,6 +485,8 @@ static struct {
     XENTRY(REG_OP_SGN, unop_sgn),
     XENTRY(REG_OP_FLOOR, unop_floor),
     XENTRY(REG_OP_ROUND, unop_round),
+    XENTRY(REG_OP_CEIL, unop_ceil),
+    XENTRY(REG_OP_TRUNC, unop_trunc),
     XENTRY(REG_OP_ORD, unop_ord),
     //XENTRY(REG_OP_CHR, unop_chr),
     XENTRY(REG_OP_LN, unop_ln),
@@ -1447,6 +1461,26 @@ static Value unop_round(Value& lhs) noexcept {
     return lhs.unexpected_type();
 }
 
+static Value unop_ceil(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_CEIL(lhs.number.f));
+    case TYPE_INT:   return Value(lhs.number.i);
+    case TYPE_UINT:  return Value(lhs.number.u);
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_trunc(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_TRUNC(lhs.number.f));
+    case TYPE_INT:   return Value(lhs.number.i);
+    case TYPE_UINT:  return Value(lhs.number.u);
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
 static Value unop_ord(Value &lhs) noexcept {
     char buf[512];
     switch (lhs.type) {
@@ -1888,6 +1922,8 @@ Value Value::unexpected_type(void) noexcept {
 #undef FLOAT_TAN
 #undef FLOAT_FLOOR
 #undef FLOAT_ROUND
+#undef FLOAT_CEIL
+#undef FLOAT_TRUNC
 #undef FLOAT_LOG10
 #undef FLOAT_LOG
 #undef FLOAT_ZERO
