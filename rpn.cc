@@ -326,11 +326,13 @@ static Value binop_ror(Value& lhs, Value& rhs) noexcept;
 static Value binop_rol(Value& lhs, Value& rhs) noexcept;
 static Value binop_ncr(Value& lhs, Value& rhs) noexcept;
 static Value binop_npr(Value& lhs, Value& rhs) noexcept;
+static Value binop_save(Value& val, Value& name) noexcept;
 
 static Value unop_not(Value& lhs) noexcept;
 static Value unop_inv(Value& lhs) noexcept;
 static Value unop_end(Value& lhs) noexcept;
 static Value unop_sep(Value& lhs) noexcept;
+static Value unop_quiet(Value& lhs) noexcept;
 static Value unop_sqrt(Value& lhs) noexcept;
 static Value unop_sin(Value& lhs) noexcept;
 static Value unop_cos(Value& lhs) noexcept;
@@ -393,6 +395,7 @@ static SymUnop unopTable[] = {
     unop_inv,
     unop_end,
     unop_sep,
+    unop_quiet,
     unop_sqrt,
     unop_sin,
     unop_cos,
@@ -471,6 +474,7 @@ static struct {
     XENTRY(REG_OP_END, unop_end),
     XENTRY(REG_OP_SEP_SYM, unop_sep),
     XENTRY(REG_OP_SEP, unop_sep),
+    XENTRY(REG_OP_QUIET, unop_quiet),
     XENTRY(REG_OP_CAST, binop_cast),
     XENTRY(REG_OP_AS, binop_pun),
     XENTRY(REG_OP_SQRT, unop_sqrt),
@@ -499,14 +503,17 @@ static struct {
     XENTRY(REG_OP_INVERSE, unop_inverse),
     XENTRY(REG_OP_NCR, binop_ncr),
     XENTRY(REG_OP_NPR, binop_npr),
+    XENTRY(REG_OP_SAVE, binop_save),
     XENTRY(NULL, NULL),
 };
 #undef XENTRY
 
-static struct {
+struct Variable {
     const char *name;
     Value value;
-} constants[] = {
+};
+
+static std::vector<Variable> constants = {
     {"pi", Value((Float)M_PI)},
     {"%e", Value((Float)M_E)},
     {"inf", Value((Float)INFINITY)},
@@ -522,8 +529,29 @@ static struct {
     {"fmantmask", Value((Int)MY_FMANTMASK)},
     {"fexpmask", Value((Int)MY_FEXPMASK)},
     {"fexpbit", Value((Int)MY_FEXPBIT)},
-    {NULL, Value()}
 };
+
+static Value *constant_find(const char *name) noexcept {
+    assert(name);
+    for (auto& var : constants) {
+        if (strcasecmp(name, var.name) == 0) {
+            return &var.value;
+        }
+    }
+    return NULL;
+}
+
+static void constant_save(const char *name, Value& val) noexcept {
+    assert(name);
+    Value *v = constant_find(name);
+    if (v) {
+        *v = val;
+        return;
+    }
+
+    Variable variable = {name, val};
+    constants.push_back(variable);
+}
 
 struct Rpn {
     std::stack<Value> stack;
@@ -586,6 +614,22 @@ void rpn_push(Rpn*self, char *value) noexcept {
     self->push(value);
 }
 
+static Value maybe_a_constant(Value v) noexcept {
+    // not a string
+    if (v.type != TYPE_STRING) {
+        return v;
+    }
+
+    Value *lookup = constant_find(v.number.s);
+    // not a constant
+    if (!lookup) {
+        return v;
+    }
+
+    // a constant
+    return *lookup;
+}
+
 void rpn_print(Rpn *self) noexcept {
     assert(self);
     if (self->stack.size() < 1) {
@@ -594,6 +638,7 @@ void rpn_print(Rpn *self) noexcept {
     }
 
     Value& value = self->stack.top();
+    value = maybe_a_constant(value);
     value.println();
 }
 
@@ -633,7 +678,7 @@ void rpn_help() noexcept {
 
     printf("Constants consist of\n\n\t");
     len = 0;
-    for (int i = 0; constants[i].name != NULL; i++) {
+    for (size_t i = 0; i < constants.size(); i++) {
         if (len > 60) {
             printf("\n\t");
             len = 0;
@@ -652,12 +697,6 @@ static Node *node_new(char *value) noexcept {
     if (value[0] == 0) {
         EPRINT("operation: <empty> does not exist\n");
         exit(1);
-    }
-
-    for (int i = 0; constants[i].name; i++) {
-        if (strcasecmp(value, constants[i].name) == 0) {
-            return (Node *) new (std::nothrow) NumNode(constants[i].value);
-        }
     }
 
     // floating point
@@ -747,11 +786,14 @@ void SymNode::exec(std::stack<Value>& stack) noexcept {
             EPRINT("unary op: Invalid stack\n");
             exit(1);
         }
+
         Value lhs = stack.top();
+        lhs = maybe_a_constant(lhs);
+
         stack.pop();
         SymUnop op = (SymUnop)this->op;
         Value res = op(lhs);
-        if (op != unop_end && op != unop_sep) {
+        if (op != unop_end && op != unop_sep && op != unop_quiet) {
             stack.push(res);
         }
     }
@@ -761,10 +803,15 @@ void SymNode::exec(std::stack<Value>& stack) noexcept {
             EPRINT("binary op: Invalid stack\n");
             exit(1);
         }
+
         Value rhs = stack.top();
+        rhs = maybe_a_constant(rhs);
         stack.pop();
+
         Value lhs = stack.top();
+        lhs = maybe_a_constant(lhs);
         stack.pop();
+
         SymBinop op = (SymBinop)this->op;
         Value res = op(lhs, rhs);
         stack.push(res);
@@ -1333,6 +1380,15 @@ static Value binop_npr(Value& lhs, Value& rhs) noexcept {
     return lhs.unexpected_type();
 }
 
+static Value binop_save(Value& val, Value& name) noexcept {
+    if (name.type != TYPE_STRING) {
+        return name.unexpected_type();
+    }
+
+    constant_save(name.number.s, val);
+    return val;
+}
+
 static Value unop_not(Value& lhs) noexcept {
     switch (lhs.type) {
     case TYPE_FLOAT: return Value((Float)!lhs.number.u);
@@ -1364,6 +1420,11 @@ static Value unop_end(Value& lhs) noexcept {
 
 static Value unop_sep(Value& lhs) noexcept {
     lhs.print();
+    return Value();
+}
+
+static Value unop_quiet(Value& lhs) noexcept {
+    (void)lhs;
     return Value();
 }
 

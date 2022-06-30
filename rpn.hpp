@@ -77,6 +77,7 @@
 #define REG_OP_END "end"
 #define REG_OP_SEP_SYM ","
 #define REG_OP_SEP "sep"
+#define REG_OP_QUIET "quiet"
 #define REG_OP_CAST "cast"
 #define REG_OP_AS "as"
 #define REG_OP_SQRT "sqrt"
@@ -105,6 +106,8 @@
 #define REG_OP_FACTORIAL "fact"
 #define REG_OP_NCR "ncr"
 #define REG_OP_NPR "npr"
+
+#define REG_OP_SAVE "save"
 
 struct RpnVtable {
     void *(* create)() noexcept;

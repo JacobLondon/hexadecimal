@@ -99,12 +99,19 @@ b
 
 $ hd --endianness
 little
+
+# variables seperated by 'quiet' to not print anything before (similar to end/sep)
+$ hd fexpmask fexpbit shl my_floating_mantissa save quiet  my_floating_mantissa hex as
+0x7FF0000000000000
+
+# saving returns the saved value
+$ hd 10 my_ten save 1 add
+11
 ```
 
 ## TODO
 * Allow underscores to make it easier to enter and display
 * Support different formats for numbers
-* Add variables to the variable list during runtime
 * atan, tanh, atanh and the like
 * min/max functions
 * quiet sep equivalent that doesn't print
