@@ -23,6 +23,10 @@ typedef uint8_t Uint;
 #define FLOAT_SIN(...) (Float)sinf(__VA_ARGS__)
 #define FLOAT_COS(...) (Float)cosf(__VA_ARGS__)
 #define FLOAT_TAN(...) (Float)tanf(__VA_ARGS__)
+#define FLOAT_ASIN(...) (Float)asinf(__VA_ARGS__)
+#define FLOAT_ACOS(...) (Float)acosf(__VA_ARGS__)
+#define FLOAT_ATAN(...) (Float)atanf(__VA_ARGS__)
+#define FLOAT_ATAN2(...) (Float)atan2f(__VA_ARGS__)
 #define FLOAT_FLOOR(...) (Float)floorf(__VA_ARGS__)
 #define FLOAT_ROUND(...) (Float)roundf(__VA_ARGS__)
 #define FLOAT_CEIL(...) (Float)ceilf(__VA_ARGS__)
@@ -66,6 +70,10 @@ typedef uint16_t Uint;
 #define FLOAT_SIN(...) (Float)sinf(__VA_ARGS__)
 #define FLOAT_COS(...) (Float)cosf(__VA_ARGS__)
 #define FLOAT_TAN(...) (Float)tanf(__VA_ARGS__)
+#define FLOAT_ASIN(...) (Float)asinf(__VA_ARGS__)
+#define FLOAT_ACOS(...) (Float)acosf(__VA_ARGS__)
+#define FLOAT_ATAN(...) (Float)atanf(__VA_ARGS__)
+#define FLOAT_ATAN2(...) (Float)atan2f(__VA_ARGS__)
 #define FLOAT_FLOOR(...) (Float)floorf(__VA_ARGS__)
 #define FLOAT_ROUND(...) (Float)roundf(__VA_ARGS__)
 #define FLOAT_CEIL(...) (Float)ceilf(__VA_ARGS__)
@@ -102,18 +110,22 @@ typedef uint32_t Uint;
 #define FMT_LONG_FLOAT "%.10f"
 #define FMT_LONG_HEX "%08X"
 #define FMT_LONG_OCT "%011o"
-#define FLOAT_MOD(...) fmodf(__VA_ARGS__)
-#define FLOAT_POW(...) powf(__VA_ARGS__)
-#define FLOAT_SQRT(...) sqrtf(__VA_ARGS__)
-#define FLOAT_SIN(...) sinf(__VA_ARGS__)
-#define FLOAT_COS(...) cosf(__VA_ARGS__)
-#define FLOAT_TAN(...) tanf(__VA_ARGS__)
-#define FLOAT_FLOOR(...) floorf(__VA_ARGS__)
+#define FLOAT_MOD(...) (Float)fmodf(__VA_ARGS__)
+#define FLOAT_POW(...) (Float)powf(__VA_ARGS__)
+#define FLOAT_SQRT(...) (Float)sqrtf(__VA_ARGS__)
+#define FLOAT_SIN(...) (Float)sinf(__VA_ARGS__)
+#define FLOAT_COS(...) (Float)cosf(__VA_ARGS__)
+#define FLOAT_TAN(...) (Float)tanf(__VA_ARGS__)
+#define FLOAT_ASIN(...) (Float)asinf(__VA_ARGS__)
+#define FLOAT_ACOS(...) (Float)acosf(__VA_ARGS__)
+#define FLOAT_ATAN(...) (Float)atanf(__VA_ARGS__)
+#define FLOAT_ATAN2(...) (Float)atan2f(__VA_ARGS__)
+#define FLOAT_FLOOR(...) (Float)floorf(__VA_ARGS__)
 #define FLOAT_CEIL(...) (Float)ceilf(__VA_ARGS__)
 #define FLOAT_TRUNC(...) (Float)truncf(__VA_ARGS__)
-#define FLOAT_ROUND(...) roundf(__VA_ARGS__)
-#define FLOAT_LOG10(...) log10f(__VA_ARGS__)
-#define FLOAT_LOG(...) logf(__VA_ARGS__)
+#define FLOAT_ROUND(...) (Float)roundf(__VA_ARGS__)
+#define FLOAT_LOG10(...) (Float)log10f(__VA_ARGS__)
+#define FLOAT_LOG(...) (Float)logf(__VA_ARGS__)
 #define FLOAT_ZERO 0.0f
 #define MY_INTMAX INT32_MAX
 #define MY_UINTMAX UINT32_MAX
@@ -164,18 +176,22 @@ typedef uint64_t Uint;
 #  define FMT_LONG_HEX "%016lX"
 #  define FMT_LONG_OCT "%022lo"
 #endif
-#define FLOAT_MOD(...) fmod(__VA_ARGS__)
-#define FLOAT_POW(...) pow(__VA_ARGS__)
-#define FLOAT_SQRT(...) sqrt(__VA_ARGS__)
-#define FLOAT_SIN(...) sin(__VA_ARGS__)
-#define FLOAT_COS(...) cos(__VA_ARGS__)
-#define FLOAT_TAN(...) tan(__VA_ARGS__)
-#define FLOAT_FLOOR(...) floor(__VA_ARGS__)
+#define FLOAT_MOD(...) (Float)fmod(__VA_ARGS__)
+#define FLOAT_POW(...) (Float)pow(__VA_ARGS__)
+#define FLOAT_SQRT(...) (Float)sqrt(__VA_ARGS__)
+#define FLOAT_SIN(...) (Float)sin(__VA_ARGS__)
+#define FLOAT_COS(...) (Float)cos(__VA_ARGS__)
+#define FLOAT_TAN(...) (Float)tan(__VA_ARGS__)
+#define FLOAT_ASIN(...) (Float)asin(__VA_ARGS__)
+#define FLOAT_ACOS(...) (Float)acos(__VA_ARGS__)
+#define FLOAT_ATAN(...) (Float)atan(__VA_ARGS__)
+#define FLOAT_ATAN2(...) (Float)atan2(__VA_ARGS__)
+#define FLOAT_FLOOR(...) (Float)floor(__VA_ARGS__)
 #define FLOAT_CEIL(...) (Float)ceil(__VA_ARGS__)
 #define FLOAT_TRUNC(...) (Float)trunc(__VA_ARGS__)
-#define FLOAT_ROUND(...) round(__VA_ARGS__)
-#define FLOAT_LOG10(...) log10(__VA_ARGS__)
-#define FLOAT_LOG(...) log(__VA_ARGS__)
+#define FLOAT_ROUND(...) (Float)round(__VA_ARGS__)
+#define FLOAT_LOG10(...) (Float)log10(__VA_ARGS__)
+#define FLOAT_LOG(...) (Float)log(__VA_ARGS__)
 #define FLOAT_ZERO 0.0
 #define MY_INTMAX INT64_MAX
 #define MY_UINTMAX UINT64_MAX
@@ -342,6 +358,15 @@ static Value unop_sqrt(Value& lhs) noexcept;
 static Value unop_sin(Value& lhs) noexcept;
 static Value unop_cos(Value& lhs) noexcept;
 static Value unop_tan(Value& lhs) noexcept;
+static Value unop_asin(Value& lhs) noexcept;
+static Value unop_acos(Value& lhs) noexcept;
+static Value unop_atan(Value& lhs) noexcept;
+static Value binop_atan2(Value& lhs, Value& rhs) noexcept;
+static Value unop_abs(Value& lhs) noexcept;
+static Value unop_sgn(Value& lhs) noexcept;
+static Value unop_floor(Value& lhs) noexcept;
+static Value unop_round(Value& lhs) noexcept;
+static Value unop_ceil(Value& lhs) noexcept;
 static Value unop_abs(Value& lhs) noexcept;
 static Value unop_sgn(Value& lhs) noexcept;
 static Value unop_floor(Value& lhs) noexcept;
@@ -405,6 +430,9 @@ static SymUnop unopTable[] = {
     unop_sin,
     unop_cos,
     unop_tan,
+    unop_asin,
+    unop_acos,
+    unop_atan,
     unop_abs,
     unop_sgn,
     unop_floor,
@@ -490,6 +518,10 @@ static struct {
     XENTRY(REG_OP_SIN, unop_sin),
     XENTRY(REG_OP_COS, unop_cos),
     XENTRY(REG_OP_TAN, unop_tan),
+    XENTRY(REG_OP_ASIN, unop_asin),
+    XENTRY(REG_OP_ACOS, unop_acos),
+    XENTRY(REG_OP_ATAN, unop_atan),
+    XENTRY(REG_OP_ATAN2, binop_atan2),
     XENTRY(REG_OP_ABS, unop_abs), // to +
     XENTRY(REG_OP_SGN, unop_sgn),
     XENTRY(REG_OP_FLOOR, unop_floor),
@@ -1487,6 +1519,47 @@ static Value unop_tan(Value& lhs) noexcept {
     return lhs.unexpected_type();
 }
 
+static Value unop_asin(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_ASIN(lhs.number.f));
+    case TYPE_INT:   return Value((Float)FLOAT_ASIN((Float)lhs.number.i));
+    case TYPE_UINT:  return Value((Float)FLOAT_ASIN((Float)lhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_acos(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_ACOS(lhs.number.f));
+    case TYPE_INT:   return Value((Float)FLOAT_ACOS((Float)lhs.number.i));
+    case TYPE_UINT:  return Value((Float)FLOAT_ACOS((Float)lhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_atan(Value& lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_ATAN(lhs.number.f));
+    case TYPE_INT:   return Value((Float)FLOAT_ATAN((Float)lhs.number.i));
+    case TYPE_UINT:  return Value((Float)FLOAT_ATAN((Float)lhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_atan2(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)FLOAT_ATAN2(lhs.number.f, rhs.number.f));
+    case TYPE_INT:   return Value((Float)FLOAT_ATAN2((Float)lhs.number.i, (Float)rhs.number.i));
+    case TYPE_UINT:  return Value((Float)FLOAT_ATAN2((Float)lhs.number.u, (Float)rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
 static Value unop_abs(Value& lhs) noexcept {
     switch (lhs.type) {
     case TYPE_FLOAT: return Value((Float)(lhs.number.f < FLOAT_ZERO ? (((Float)-1) * lhs.number.f) : lhs.number.f));
@@ -2010,6 +2083,10 @@ Value Value::unexpected_type(void) noexcept {
 #undef FLOAT_SIN
 #undef FLOAT_COS
 #undef FLOAT_TAN
+#undef FLOAT_ASIN
+#undef FLOAT_ACOS
+#undef FLOAT_ATAN
+#undef FLOAT_ATAN2
 #undef FLOAT_FLOOR
 #undef FLOAT_ROUND
 #undef FLOAT_CEIL

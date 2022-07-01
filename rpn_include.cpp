@@ -46,6 +46,7 @@ void regex_cleanup(void)
 #define XCLEANUP(RegP) do { \
         if (RegP) { \
             delete RegP; \
+            RegP = nullptr; \
         } \
     } while (0)
 
