@@ -21,8 +21,8 @@
 //#define REG_TOKEN REG_NUMBER "|" "(" REG_TYPE "|" REG_FORMAT ")" "[\\s\\n\\r]*"
 //#define REG_PIVOT REG_NUMBER "$"
 
-#define REG_OP_BITANDINV_SYM "&~"
-#define REG_OP_BITANDINV "bitandinv"
+#define REG_OP_BITCLEAR_SYM "&~"
+#define REG_OP_BITCLEAR "bitclear"
 #define REG_OP_AND_SYM "&&"
 #define REG_OP_AND "and"
 #define REG_OP_OR_SYM "||"

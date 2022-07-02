@@ -33,12 +33,16 @@ $ hd 0x19
 # note 8/16 bits do not have floating point representations
 $ hd inf hex as
 0x7FF0000000000000
+
 $ hd --32 inf hex as
 0x7F800000
+
 $ hd --16 -2 hex as
 0xFFFE
+
 $ hd --8 --long 10 bin as
 0b00001010
+
 $ hd --8 10 bin as
 0b1010
 
@@ -49,13 +53,15 @@ $ hd -10.2 bin as
 # seperate your operations
 $ hd 10 sep 50 sep 100
 0xA 0x32 0x64
-$ hd 10 int as end 10 hex as
+
+$ hd 10 int as end 10 oct as
 10
-0xA
+0o12
 
 # signed-ness
 $ hd -1
 0xFFFFFFFFFFFFFFFF
+
 $ hd -1 int as
 -1
 
@@ -73,6 +79,17 @@ $ hd 10.0 info
 0, 1026, 1125899906842624
 0, 0x402, 0x4000000000000
 10
+
+# factorial supported...
+$ hd 4 fact
+24
+
+# bit rotation!
+$ hd --8 0x1 1 rol hex as
+0x2
+
+$ hd --8 0x1 2 ror hex as
+0x40
 
 # Constants 'pi e nan inf' are supported
 $ hd pi sep %e sep nan sep inf sep -inf
@@ -105,11 +122,13 @@ $ hd fexpmask fexpbit shl my_floating_mantissa save quiet  my_floating_mantissa 
 0x7FF0000000000000
 
 # saving returns the saved value
-$ hd 10 my_ten save 1 add
-11
+$ hd 10 my_ten save  my_ten mul
+100
 ```
 
 ## TODO
 * Allow underscores to make it easier to enter and display
 * Support different formats for numbers
 * hyperbolic trig functions
+* string functions (including XOR)
+* logical/bit xor

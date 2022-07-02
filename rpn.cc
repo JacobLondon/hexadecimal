@@ -37,7 +37,7 @@ typedef uint8_t Uint;
 #define MY_INTMAX INT8_MAX
 #define MY_UINTMAX UINT8_MAX
 #define MY_FLOATMAX INT8_MAX
-#define MY_FLOATMIN UINT8_MAX
+#define MY_FLOATMIN 0
 #define MY_BITMAX 7
 #define MY_FMANTMASK 0x7
 #define MY_FEXPMASK 0xF
@@ -84,7 +84,7 @@ typedef uint16_t Uint;
 #define MY_INTMAX INT16_MAX
 #define MY_UINTMAX UINT16_MAX
 #define MY_FLOATMAX INT16_MAX
-#define MY_FLOATMIN UINT16_MAX
+#define MY_FLOATMIN 0
 #define MY_BITMAX 15
 #define MY_FMANTMASK 0x3FF
 #define MY_FEXPMASK 0x1F
@@ -326,7 +326,7 @@ static Value binop_pow(Value& lhs, Value& rhs) noexcept;
 static Value binop_xor(Value& lhs, Value& rhs) noexcept;
 static Value binop_bitand(Value& lhs, Value& rhs) noexcept;
 static Value binop_bitor(Value& lhs, Value& rhs) noexcept;
-static Value binop_bitandinv(Value& lhs, Value& rhs) noexcept;
+static Value binop_bitclear(Value& lhs, Value& rhs) noexcept;
 static Value binop_and(Value& lhs, Value& rhs) noexcept;
 static Value binop_or(Value& lhs, Value& rhs) noexcept;
 static Value binop_shl(Value& lhs, Value& rhs) noexcept;
@@ -399,7 +399,7 @@ static SymBinop binopTable[] = {
     binop_xor,
     binop_bitand,
     binop_bitor,
-    binop_bitandinv,
+    binop_bitclear,
     binop_and,
     binop_or,
     binop_shl,
@@ -472,8 +472,8 @@ static struct {
     XENTRY(REG_OP_BITAND, binop_bitand),
     XENTRY(REG_OP_BITOR_SYM, binop_bitor),
     XENTRY(REG_OP_BITOR, binop_bitor),
-    XENTRY(REG_OP_BITANDINV_SYM, binop_bitandinv), // a & ~b
-    XENTRY(REG_OP_BITANDINV, binop_bitandinv),
+    XENTRY(REG_OP_BITCLEAR_SYM, binop_bitclear), // a & ~b
+    XENTRY(REG_OP_BITCLEAR, binop_bitclear),
     XENTRY(REG_OP_NOT_SYM, unop_not),
     XENTRY(REG_OP_NOT, unop_not),
     XENTRY(REG_OP_INV_SYM, unop_inv),
@@ -1011,7 +1011,7 @@ static Value binop_bitor(Value& lhs, Value& rhs) noexcept {
     return lhs.unexpected_type();
 }
 
-static Value binop_bitandinv(Value& lhs, Value& rhs) noexcept {
+static Value binop_bitclear(Value& lhs, Value& rhs) noexcept {
     if (rhs.type == TYPE_STRING) {
         rhs.unexpected_type();
     }
