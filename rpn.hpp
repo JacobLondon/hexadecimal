@@ -120,6 +120,8 @@
 #define REG_OP_NPR "npr"
 
 #define REG_OP_SAVE "save"
+#define REG_OP_CLEARBITS "clearbits"
+#define REG_OP_SETBITS "setbits"
 
 struct RpnVtable {
     void *(* create)() noexcept;

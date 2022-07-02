@@ -385,6 +385,8 @@ static Value unop_fexp(Value &lhs) noexcept;
 static Value unop_fmant(Value &lhs) noexcept;
 static Value unop_factorial(Value &lhs) noexcept;
 static Value unop_inverse(Value &lhs) noexcept;
+static Value unop_clearbits(Value &lhs) noexcept;
+static Value unop_setbits(Value &lhs) noexcept;
 
 static bool op_isunary(SymOp op) noexcept;
 //static bool op_isbinary(SymOp op) noexcept;
@@ -451,6 +453,8 @@ static SymUnop unopTable[] = {
     unop_fmant,
     unop_factorial,
     unop_inverse,
+    unop_clearbits,
+    unop_setbits,
     NULL,
 };
 
@@ -547,6 +551,8 @@ static struct {
     XENTRY(REG_OP_SAVE, binop_save),
     XENTRY(REG_OP_MAX, binop_max),
     XENTRY(REG_OP_MIN, binop_min),
+    XENTRY(REG_OP_CLEARBITS, unop_clearbits),
+    XENTRY(REG_OP_SETBITS, unop_setbits),
     XENTRY(NULL, NULL),
 };
 #undef XENTRY
@@ -1822,6 +1828,38 @@ static Value unop_inverse(Value &lhs) noexcept {
     case TYPE_FLOAT: return Value((Float)FLOAT_POW(lhs.number.f, (Float)-1));
     case TYPE_INT:   return Value((Float)FLOAT_POW((Float)lhs.number.i, (Float)-1));
     case TYPE_UINT:  return Value((Float)FLOAT_POW((Float)lhs.number.u, (Float)-1));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+// https://stackoverflow.com/questions/65401101/what-is-the-fastest-way-to-count-all-set-bits
+static Uint count_bits(Uint number)
+{
+    Uint lookup[16]={0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4};
+    Uint count = 0;
+    while (number != 0) {
+        count += lookup[number & 0xF];
+        number >>= 4;
+    }
+    return count;
+}
+
+static Value unop_clearbits(Value &lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)( sizeof(Uint)*8 - count_bits(lhs.number.u) ));
+    case TYPE_INT:   return Value((Int)( sizeof(Uint)*8 - count_bits(lhs.number.u) ));
+    case TYPE_UINT:  return Value((Uint)( sizeof(Uint)*8 - count_bits(lhs.number.u) ));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value unop_setbits(Value &lhs) noexcept {
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)count_bits(lhs.number.u));
+    case TYPE_INT:   return Value((Int)count_bits(lhs.number.u));
+    case TYPE_UINT:  return Value((Uint)count_bits(lhs.number.u));
     default: break;
     }
     return lhs.unexpected_type();
