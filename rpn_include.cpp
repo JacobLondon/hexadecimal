@@ -16,8 +16,12 @@ static std::regex *regex_unsigned;
 static std::regex *regex_signed;
 static std::regex *regex_float;
 static std::regex *regex_binary;
+static std::regex *regex_binary_post;
 static std::regex *regex_octal;
+static std::regex *regex_octal_pre;
+static std::regex *regex_octal_post;
 static std::regex *regex_hexadecimal;
+static std::regex *regex_hexadecimal_post;
 
 void regex_init(void)
 {
@@ -35,8 +39,12 @@ void regex_init(void)
     XINIT(regex_signed, REG_SIGNED);
     XINIT(regex_float, REG_FLOAT);
     XINIT(regex_binary, REG_BIN);
+    XINIT(regex_binary_post, REG_BIN_POST);
     XINIT(regex_octal, REG_OCT);
+    XINIT(regex_octal_pre, REG_OCT_PRE);
+    XINIT(regex_octal_post, REG_OCT_POST);
     XINIT(regex_hexadecimal, REG_HEX);
+    XINIT(regex_hexadecimal_post, REG_HEX_POST);
 
 #undef XINIT
 }
@@ -54,8 +62,12 @@ void regex_cleanup(void)
     XCLEANUP(regex_signed);
     XCLEANUP(regex_float);
     XCLEANUP(regex_binary);
+    XCLEANUP(regex_binary_post);
     XCLEANUP(regex_octal);
+    XCLEANUP(regex_octal_pre);
+    XCLEANUP(regex_octal_post);
     XCLEANUP(regex_hexadecimal);
+    XCLEANUP(regex_hexadecimal_post);
 
 #undef XCLEANUP
 }
@@ -67,8 +79,12 @@ bool regex_is_initialized(void)
         regex_signed &&
         regex_float &&
         regex_binary &&
+        regex_binary_post &&
         regex_octal &&
-        regex_hexadecimal;
+        regex_octal_pre &&
+        regex_octal_post &&
+        regex_hexadecimal &&
+        regex_hexadecimal_post;
 }
 
 /**

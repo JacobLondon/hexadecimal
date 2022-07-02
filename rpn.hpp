@@ -1,9 +1,13 @@
 #ifndef HD_RPN_H
 #define HD_RPN_H
 
-#define REG_BIN "(0[bB][01]+)"
-#define REG_OCT "(0[oO][01234567]+)"
-#define REG_HEX "(0[xX][0123456789aAbBcCdDeEfF]+)"
+#define REG_BIN      "(0[bB][01]+)"
+#define REG_BIN_POST "([01]+[bB])"
+#define REG_OCT      "(0[oO][01234567]+)"
+#define REG_OCT_PRE  "(0[01234567]+)"
+#define REG_OCT_POST "([01234567]+[oO])"
+#define REG_HEX      "(0[xX][0123456789aAbBcCdDeEfF]+)"
+#define REG_HEX_POST "([0123456789aAbBcCdDeEfF]+[hH])"
 //#define REG_DEC "([+-]?((0)|([123456789][1234567890]*)))"
 
 //#define REG_CONSTANT "pi|e|inf|nan"

@@ -772,6 +772,14 @@ static Node *node_new(char *value) noexcept {
             return (Node *) new (std::nothrow) NumNode(tmp);
         }
     }
+    else if (std::regex_match(value, *regex_hexadecimal_post)) {
+        Uint number;
+        if (sscanf(&value[0], FMT_HEX, &number) == 1) {
+            Value tmp = Value(number);
+            return (Node *) new (std::nothrow) NumNode(tmp);
+        }
+    }
+
     // octal
     else if (std::regex_match(value, *regex_octal)) {
         Uint number;
@@ -780,10 +788,32 @@ static Node *node_new(char *value) noexcept {
             return (Node *) new (std::nothrow) NumNode(tmp);
         }
     }
+    else if (std::regex_match(value, *regex_octal_pre)) {
+        Uint number;
+        if (sscanf(&value[1], FMT_OCT, &number) == 1) {
+            Value tmp = Value(number);
+            return (Node *) new (std::nothrow) NumNode(tmp);
+        }
+    }
+    else if (std::regex_match(value, *regex_octal_post)) {
+        Uint number;
+        if (sscanf(&value[0], FMT_OCT, &number) == 1) {
+            Value tmp = Value(number);
+            return (Node *) new (std::nothrow) NumNode(tmp);
+        }
+    }
+
     // binary
     else if (std::regex_match(value, *regex_binary)) {
         Uint number;
         if (conve_binary(&value[2], &number)) {
+            Value tmp = Value(number);
+            return (Node *) new (std::nothrow) NumNode(tmp);
+        }
+    }
+    else if (std::regex_match(value, *regex_binary_post)) {
+        Uint number;
+        if (conve_binary(&value[0], &number)) {
             Value tmp = Value(number);
             return (Node *) new (std::nothrow) NumNode(tmp);
         }
@@ -1957,12 +1987,17 @@ static void print_reversed(Uint value) noexcept {
     fflush(stdout);
 }
 
+// must be formatted properly by some regex
 static bool conve_binary(const char *value, Uint *out) noexcept {
     assert(value);
     assert(out);
 
     Uint builder = 0;
     Uint i = strlen(value) - 1;
+    if ((value[i] == 'b') || (value[i] == 'B')) {
+        i--;
+    }
+
     for (const char *p = value; *p != 0; p++, i--) {
         if (*p == '1') {
             builder |= (((Uint)1) << i);
@@ -1971,7 +2006,7 @@ static bool conve_binary(const char *value, Uint *out) noexcept {
             ;
         }
         else {
-            return false;
+            //return false;
         }
     }
     *out = builder;

@@ -128,7 +128,6 @@ $ hd 10 my_ten save  my_ten mul
 
 ## TODO
 * Allow underscores to make it easier to enter and display
-* Support different formats for numbers
 * hyperbolic trig functions
 * string functions (including XOR)
 * logical/bit xor
