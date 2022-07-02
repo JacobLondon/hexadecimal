@@ -323,12 +323,14 @@ static Value binop_mul(Value& lhs, Value& rhs) noexcept;
 static Value binop_div(Value& lhs, Value& rhs) noexcept;
 static Value binop_mod(Value& lhs, Value& rhs) noexcept;
 static Value binop_pow(Value& lhs, Value& rhs) noexcept;
-static Value binop_xor(Value& lhs, Value& rhs) noexcept;
+static Value binop_bitxor(Value& lhs, Value& rhs) noexcept;
 static Value binop_bitand(Value& lhs, Value& rhs) noexcept;
 static Value binop_bitor(Value& lhs, Value& rhs) noexcept;
 static Value binop_bitclear(Value& lhs, Value& rhs) noexcept;
 static Value binop_and(Value& lhs, Value& rhs) noexcept;
 static Value binop_or(Value& lhs, Value& rhs) noexcept;
+static Value binop_xor(Value& lhs, Value& rhs) noexcept;
+
 static Value binop_shl(Value& lhs, Value& rhs) noexcept;
 static Value binop_shr(Value& lhs, Value& rhs) noexcept;
 static Value binop_equ(Value& lhs, Value& rhs) noexcept;
@@ -396,7 +398,7 @@ static SymBinop binopTable[] = {
     binop_div,
     binop_mod,
     binop_pow,
-    binop_xor,
+    binop_bitxor,
     binop_bitand,
     binop_bitor,
     binop_bitclear,
@@ -466,8 +468,8 @@ static struct {
     XENTRY(REG_OP_DIV, binop_div),
     XENTRY(REG_OP_MOD_SYM, binop_mod),
     XENTRY(REG_OP_MOD, binop_mod),
-    XENTRY(REG_OP_XOR_SYM, binop_xor),
-    XENTRY(REG_OP_XOR, binop_xor),
+    XENTRY(REG_OP_BITXOR_SYM, binop_bitxor),
+    XENTRY(REG_OP_BITXOR, binop_bitxor),
     XENTRY(REG_OP_BITAND_SYM, binop_bitand),
     XENTRY(REG_OP_BITAND, binop_bitand),
     XENTRY(REG_OP_BITOR_SYM, binop_bitor),
@@ -482,6 +484,8 @@ static struct {
     XENTRY(REG_OP_AND, binop_and),
     XENTRY(REG_OP_OR_SYM, binop_or),
     XENTRY(REG_OP_OR, binop_or),
+    XENTRY(REG_OP_XOR_SYM, binop_xor),
+    XENTRY(REG_OP_XOR, binop_xor),
     XENTRY(REG_OP_POW_SYM, binop_pow),
     XENTRY(REG_OP_POW, binop_pow),
     XENTRY(REG_OP_SHL_SYM, binop_shl),
@@ -990,7 +994,7 @@ static Value binop_pow(Value& lhs, Value& rhs) noexcept {
     return lhs.unexpected_type();
 }
 
-static Value binop_xor(Value& lhs, Value& rhs) noexcept {
+static Value binop_bitxor(Value& lhs, Value& rhs) noexcept {
     if (rhs.type == TYPE_STRING) {
         rhs.unexpected_type();
     }
@@ -1077,6 +1081,17 @@ static Value binop_or(Value& lhs, Value& rhs) noexcept {
     case TYPE_FLOAT: return Value((Float)((lhs.number.f != FLOAT_ZERO) || (rhs.number.f != FLOAT_ZERO)));
     case TYPE_INT:   return Value((Int)(lhs.number.i || rhs.number.i));
     case TYPE_UINT:  return Value((Uint)(lhs.number.u || rhs.number.u));
+    default: break;
+    }
+    return lhs.unexpected_type();
+}
+
+static Value binop_xor(Value& lhs, Value& rhs) noexcept {
+    lhs.coerce(rhs);
+    switch (lhs.type) {
+    case TYPE_FLOAT: return Value((Float)( ((lhs.number.f == FLOAT_ZERO) && (rhs.number.f != FLOAT_ZERO)) || ((lhs.number.f != FLOAT_ZERO) && (rhs.number.f == FLOAT_ZERO)) ));
+    case TYPE_INT:   return Value((Int)( (!lhs.number.i && rhs.number.i) || (lhs.number.i && !rhs.number.i)) );
+    case TYPE_UINT:  return Value((Uint)( (!lhs.number.u && rhs.number.u) || (lhs.number.u && !rhs.number.u)) );
     default: break;
     }
     return lhs.unexpected_type();

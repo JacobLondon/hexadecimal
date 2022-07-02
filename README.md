@@ -130,4 +130,3 @@ $ hd 10 my_ten save  my_ten mul
 * Allow underscores to make it easier to enter and display
 * hyperbolic trig functions
 * string functions (including XOR)
-* logical/bit xor
