@@ -6,3 +6,4 @@ a.out
 hd
 test.cc
 *.o
+build/
