@@ -48,7 +48,7 @@ $ hd --8 10 bin as
 
 # float to binary conversion
 $ hd -10.2 bin as
-0b1100000000100100011001100110011001100110011001100110011001100110
+0b100000000100100011001100110011001100110011001100110011001100110
 
 # seperate your operations
 $ hd 10 sep 50 sep 100
@@ -72,7 +72,7 @@ $ hd -1 float cast hex as
 # bit operations on floats
 # manually set highest bit (sign bit) to 1 on a float 64
 $ hd 10.2 1 63 shl bitor
--10.2
+-10.200000
 
 # inspect floating point info
 $ hd 10.0 info
