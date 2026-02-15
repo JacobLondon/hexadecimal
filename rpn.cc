@@ -1236,6 +1236,14 @@ static Value binop_pun(Value& lhs, Value& rhs) noexcept {
         return rhs.unexpected_type();
     }
 
+    // RHS type can be int, uint, float, string but if RHS value is string
+    // and LHS type is non-string then this is a no-go
+    if ((strcasecmp(rhs.number.s, typeTable[TYPE_STRING]) == 0) &&
+        (lhs.type != TYPE_STRING))
+    {
+        return rhs.unexpected_type();
+    }
+
     for (size_t i = 0; i < TYPE_COUNT; i++) {
         if (strcasecmp(rhs.number.s, typeTable[i]) == 0) {
             switch (lhs.type) {
