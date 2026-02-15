@@ -50,6 +50,14 @@ $ hd --8 10 bin as
 $ hd -10.2 bin as
 0b100000000100100011001100110011001100110011001100110011001100110
 
+# verify the floating point precision between values of interest, for example angles around 180 degrees
+$ hd --32 180.000000
+180.000000
+$ hd --32 180.000000 hex as
+0x43340000
+$ hd --long --32 0x43340000 1 add float as
+180.0000152588
+
 # seperate your operations
 $ hd 10 sep 50 sep 100
 0xA 0x32 0x64
